@@ -1,0 +1,45 @@
+# Rust
+/target
+**/*.rs.bk
+*.pdb
+
+# WASM / frontend build output
+/dist
+/pkg
+.trunk
+*.wasm
+
+# Node / web tooling
+node_modules
+.pnp.*
+.yarn/*
+npm-debug.log*
+yarn-error.log*
+.vite
+.turbo
+.output
+.vercel
+.netlify
+.wrangler
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# Test / coverage
+/coverage
+*.profraw
+tarpaulin-report.*
+
+# Misc
+*.log
