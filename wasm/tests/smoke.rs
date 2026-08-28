@@ -52,4 +52,18 @@ fn az_failure_blast_radius_runs_on_the_real_wasm() {
 
     let spofs = studio.find_spofs();
     assert!(spofs.contains("database-1"));
+
+    // Swapping to Multi-AZ turns the outage into a degradation.
+    studio
+        .configure(
+            &db,
+            Some("rds-multi-az".into()),
+            Some("us-east-1".into()),
+            None,
+        )
+        .unwrap();
+    let report = studio.simulate_failure("us-east-1", "us-east-1a").unwrap();
+    assert!(report.contains("\"down\":[]"));
+    assert!(report.contains("fail over"));
+    assert!(studio.find_spofs().contains("[]"));
 }
