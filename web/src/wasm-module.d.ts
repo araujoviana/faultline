@@ -10,6 +10,10 @@ declare module "*/wasm/strata_wasm.js" {
     addResource(kind: string, label: string, x: number, y: number): string;
     connect(from: string, to: string): void;
     removeResource(id: string): void;
+    configure(id: string, variant: string, region: string, az: string): void;
+    simulateFailure(region: string, az: string): string;
+    findSpofs(): string;
+    profileJson(): string;
     stateJson(): string;
     loadJson(json: string): void;
   }

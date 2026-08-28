@@ -18,12 +18,19 @@ export const RESOURCE_KINDS = [
 
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
 
+export interface Placement {
+  region?: string;
+  az?: string;
+}
+
 export interface ResourceNode {
   id: string;
   kind: string;
   label: string;
   x: number;
   y: number;
+  variant?: string;
+  placement?: Placement;
 }
 
 export interface EdgeLink {
@@ -36,10 +43,48 @@ export interface ArchitectureState {
   edges: EdgeLink[];
 }
 
+/** Outcome of a simulated availability-zone failure (mirrors `analysis::BlastReport`). */
+export interface BlastReport {
+  target: string;
+  down: string[];
+  degraded: string[];
+  healthy: string[];
+  notes: string[];
+}
+
+/** A single point of failure and what it orphans (mirrors `analysis::Spof`). */
+export interface Spof {
+  id: string;
+  orphans: string[];
+}
+
+export interface ProfileVariant {
+  id: string;
+  display_name: string;
+  spof?: boolean;
+  failover_seconds?: number;
+}
+
+/** The active provider profile (mirrors `profile::ProviderProfile`). */
+export interface ProviderProfile {
+  provider: string;
+  display_name: string;
+  regions: { id: string; azs: string[] }[];
+  variants: Record<string, ProfileVariant[]>;
+}
+
 export interface StudioCore {
   addResource(kind: string, label: string, x: number, y: number): string;
   connect(from: string, to: string): void;
   removeResource(id: string): void;
+  /** Set a resource's provider variant and/or placement. Empty strings = leave unchanged. */
+  configure(id: string, variant?: string, region?: string, az?: string): void;
+  /** Simulate losing an AZ; returns a JSON {@link BlastReport}. */
+  simulateFailure(region: string, az: string): string;
+  /** Current single points of failure; returns a JSON {@link Spof}`[]`. */
+  findSpofs(): string;
+  /** The active provider profile as JSON. */
+  profileJson(): string;
   stateJson(): string;
   loadJson(json: string): void;
 }
@@ -50,11 +95,25 @@ interface MemoryState {
   counters: Record<string, number>;
 }
 
-/** In-memory stand-in for `strata-wasm`'s `Studio`. */
+const EMPTY_REPORT = JSON.stringify({
+  target: "",
+  down: [],
+  degraded: [],
+  healthy: [],
+  notes: [],
+});
+
+/**
+ * In-memory stand-in for `strata-wasm`'s `Studio`. Mirrors the graph mutations
+ * (used by the vitest contract tests); the failure-analysis methods are inert —
+ * their correctness is covered by the Rust unit tests, and the tools that call
+ * them are tested against a purpose-built stub core.
+ */
 export function createMemoryCore(): StudioCore {
   let state: MemoryState = { resources: [], edges: [], counters: {} };
 
   const has = (id: string) => state.resources.some((r) => r.id === id);
+  const find = (id: string) => state.resources.find((r) => r.id === id);
 
   return {
     addResource(kind, label, x, y) {
@@ -80,6 +139,26 @@ export function createMemoryCore(): StudioCore {
       if (!has(id)) throw new Error(`no such resource: ${id}`);
       state.resources = state.resources.filter((r) => r.id !== id);
       state.edges = state.edges.filter((e) => e.from !== id && e.to !== id);
+    },
+    configure(id, variant, region, az) {
+      const r = find(id);
+      if (!r) throw new Error(`no such resource: ${id}`);
+      if (variant) r.variant = variant;
+      if (region) r.placement = { region, az: az || undefined };
+    },
+    simulateFailure() {
+      return EMPTY_REPORT;
+    },
+    findSpofs() {
+      return "[]";
+    },
+    profileJson() {
+      return JSON.stringify({
+        provider: "",
+        display_name: "",
+        regions: [],
+        variants: {},
+      });
     },
     stateJson() {
       return JSON.stringify(state);

@@ -1,0 +1,36 @@
+import type { StudioCore } from "./core";
+
+const EMPTY_STATE = JSON.stringify({ resources: [], edges: [] });
+const EMPTY_REPORT = JSON.stringify({
+  target: "",
+  down: [],
+  degraded: [],
+  healthy: [],
+  notes: [],
+});
+const EMPTY_PROFILE = JSON.stringify({
+  provider: "",
+  display_name: "",
+  regions: [],
+  variants: {},
+});
+
+/**
+ * A do-nothing {@link StudioCore} for tests that exercise a tool's *formatting*
+ * of an analysis result rather than the analysis itself (which is covered by the
+ * Rust unit tests). Override just the methods a test cares about.
+ */
+export function makeStubCore(overrides: Partial<StudioCore> = {}): StudioCore {
+  return {
+    addResource: () => "resource-1",
+    connect: () => {},
+    removeResource: () => {},
+    configure: () => {},
+    simulateFailure: () => EMPTY_REPORT,
+    findSpofs: () => "[]",
+    profileJson: () => EMPTY_PROFILE,
+    stateJson: () => EMPTY_STATE,
+    loadJson: () => {},
+    ...overrides,
+  };
+}
