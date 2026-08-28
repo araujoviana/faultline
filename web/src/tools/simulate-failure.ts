@@ -20,7 +20,10 @@ export function simulateFailureTool(studio: StudioStore): WebMcpTool {
       required: ["region", "az"],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
+    // untrustedContentHint: the notes embed resource labels, which are free text
+    // a human or an earlier agent turn supplied (core `analysis.rs` formats
+    // `"<label> may briefly fail over ..."`).
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
     async execute(input) {
       const region = String(input.region ?? "");
       const az = String(input.az ?? "");

@@ -56,9 +56,10 @@ describe("simulate-failure tool", () => {
     expect(result.content[0].text).toContain("not an availability zone");
   });
 
-  it("is marked read-only and requires region + az", () => {
+  it("is marked read-only, hints untrusted output, and requires region + az", () => {
     const { tool } = setup();
     expect(tool.annotations?.readOnlyHint).toBe(true);
+    expect(tool.annotations?.untrustedContentHint).toBe(true);
     expect((tool.inputSchema as { required: string[] }).required).toEqual(["region", "az"]);
   });
 });
