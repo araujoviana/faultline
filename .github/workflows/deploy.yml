@@ -1,0 +1,128 @@
+name: Deploy
+
+# Why this workflow builds the artifact itself instead of letting Cloudflare
+# Pages build it:
+#   The web bundle depends on the Rust -> WASM core (`wasm-pack build ../wasm`,
+#   run automatically by the `prebuild` script). The Cloudflare Pages build
+#   image does not reliably provide a pinned Rust toolchain + `wasm-pack`, so we
+#   build the full stack here in GitHub Actions (same setup as ci.yml) and hand
+#   Cloudflare only the finished static `web/dist/` directory to serve.
+#
+# Modes:
+#   - push to `main`      -> production deploy
+#   - pull_request         -> preview deploy, preview URL posted as a PR comment
+#
+# Forks: a PR from a fork has no access to repo secrets, so the deploy job is
+# skipped there (the `if:` guard below) rather than failing to authenticate.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # >>> CHANGE ME <<<  Product name is not finalized. This is the ONLY place the
+  # Cloudflare Pages project name is written; it must match the project created
+  # in the Cloudflare dashboard (see DEPLOY.md).
+  CF_PAGES_PROJECT: strata-studio
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Run for pushes to main, and for PRs only when they come from a branch in
+    # THIS repo (forks and Dependabot don't get the deploy secrets).
+    if: >-
+      github.event_name != 'pull_request' ||
+      (github.event.pull_request.head.repo.full_name == github.repository &&
+       github.actor != 'dependabot[bot]')
+    permissions:
+      contents: read
+      pull-requests: write # post the preview URL as a PR comment
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Full-stack build (mirrors the `web` job in ci.yml) -----------------
+      - name: Install Rust toolchain (from rust-toolchain.toml)
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          rustup target add wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: jetli/wasm-pack-action@v0.4.0
+        with:
+          version: latest
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install web dependencies
+        working-directory: web
+        run: bun install --frozen-lockfile
+
+      - name: Build web bundle (prebuild compiles the WASM core)
+        working-directory: web
+        run: bun run build
+
+      - name: Verify build output
+        run: test -f web/dist/index.html && ls web/dist/assets/*.wasm
+
+      # --- Deploy the artifact to Cloudflare Pages ---------------------------
+      # `--branch` decides prod vs preview: Cloudflare treats a deploy on the
+      # project's Production branch (set to `main` in the dashboard) as prod and
+      # any other branch as a preview with its own URL.
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: >-
+            pages deploy web/dist
+            --project-name=${{ env.CF_PAGES_PROJECT }}
+            --branch=${{ github.head_ref || github.ref_name }}
+
+      - name: Comment preview URL on the PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const url = "${{ steps.deploy.outputs.deployment-url }}";
+            if (!url) {
+              core.warning("No deployment-url output from wrangler-action; skipping comment.");
+              return;
+            }
+            const marker = "<!-- cf-pages-preview -->";
+            const body = [
+              marker,
+              "**Cloudflare Pages preview deploy**",
+              "",
+              `Preview URL: ${url}`,
+              "",
+              `_Built from ${context.sha.slice(0, 7)} — updates on each push to this PR._`,
+            ].join("\n");
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }

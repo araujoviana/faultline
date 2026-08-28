@@ -14,6 +14,10 @@ bun run build      # build:wasm, then the production bundle -> dist/
 bun run build:wasm # compile ../wasm to src/lib/wasm/ (needs wasm-pack; runs in predev/prebuild)
 ```
 
+Deploy (Cloudflare Pages via GitHub Actions): see [`../DEPLOY.md`](../DEPLOY.md).
+`public/_headers` and `public/_redirects` ship the MIME/security headers and the
+SPA fallback.
+
 ## Layout
 
 | Path | What |
