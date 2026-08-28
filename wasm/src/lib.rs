@@ -6,6 +6,8 @@
 
 use std::str::FromStr;
 
+use strata_core::analysis::{az_failure_seed, blast_radius, spofs};
+use strata_core::profile::ProviderProfile;
 use strata_core::{Architecture, ResourceKind};
 use wasm_bindgen::prelude::*;
 
@@ -19,6 +21,7 @@ pub fn start() {
 #[wasm_bindgen]
 pub struct Studio {
     inner: Architecture,
+    profile: ProviderProfile,
 }
 
 #[wasm_bindgen]
@@ -27,6 +30,7 @@ impl Studio {
     pub fn new() -> Studio {
         Studio {
             inner: Architecture::new(),
+            profile: ProviderProfile::aws(),
         }
     }
 
@@ -52,6 +56,88 @@ impl Studio {
     #[wasm_bindgen(js_name = removeResource)]
     pub fn remove_resource(&mut self, id: &str) -> Result<(), JsError> {
         self.inner.remove_resource(id).map_err(to_js)
+    }
+
+    /// Set a resource's provider variant and/or placement.
+    ///
+    /// - `variant` empty → variant left unchanged; otherwise validated against
+    ///   the active profile.
+    /// - `region` empty → placement left unchanged.
+    /// - `region` set, `az` empty → regional (any prior zone is cleared).
+    /// - `region` and `az` set → zonal.
+    pub fn configure(
+        &mut self,
+        id: &str,
+        variant: Option<String>,
+        region: Option<String>,
+        az: Option<String>,
+    ) -> Result<(), JsError> {
+        let resource = self
+            .inner
+            .resources
+            .iter()
+            .find(|r| r.id == id)
+            .ok_or_else(|| JsError::new(&format!("no such resource: {id}")))?;
+        let kind = resource.kind;
+
+        if let Some(variant) = variant.filter(|v| !v.is_empty()) {
+            if self.profile.variant(kind, &variant).is_none() {
+                return Err(JsError::new(&format!(
+                    "unknown {kind} variant for {}: {variant}",
+                    self.profile.display_name
+                )));
+            }
+            self.inner.set_variant(id, Some(variant)).map_err(to_js)?;
+        }
+
+        if let Some(region) = region.filter(|r| !r.is_empty()) {
+            let az = az.filter(|a| !a.is_empty());
+            if let Some(az) = &az {
+                if !self.profile.has_az(&region, az) {
+                    return Err(JsError::new(&format!(
+                        "{az} is not an availability zone of {region}"
+                    )));
+                }
+            } else if self.profile.region(&region).is_none() {
+                return Err(JsError::new(&format!("unknown region: {region}")));
+            }
+            self.inner.place(id, Some(region), az).map_err(to_js)?;
+        }
+
+        Ok(())
+    }
+
+    /// Simulate the loss of availability zone `az` in `region`. Returns a
+    /// `BlastReport` as JSON.
+    #[wasm_bindgen(js_name = simulateFailure)]
+    pub fn simulate_failure(&self, region: &str, az: &str) -> Result<String, JsError> {
+        if !self.profile.has_az(region, az) {
+            return Err(JsError::new(&format!(
+                "{az} is not an availability zone of {region}"
+            )));
+        }
+        let seed = az_failure_seed(&self.inner, az);
+        let report = blast_radius(
+            &self.inner,
+            &self.profile,
+            &seed,
+            Some(region),
+            &format!("AZ {az}"),
+        );
+        Ok(serde_json::to_string(&report).expect("BlastReport always serialises"))
+    }
+
+    /// Single points of failure in the current design, as a JSON `Spof[]`.
+    #[wasm_bindgen(js_name = findSpofs)]
+    pub fn find_spofs(&self) -> String {
+        let found = spofs(&self.inner, &self.profile);
+        serde_json::to_string(&found).expect("Spof list always serialises")
+    }
+
+    /// The active provider profile as JSON (service catalogue + region topology).
+    #[wasm_bindgen(js_name = profileJson)]
+    pub fn profile_json(&self) -> String {
+        serde_json::to_string(&self.profile).expect("ProviderProfile always serialises")
     }
 
     /// The full architecture as a JSON string (`{ resources, edges, counters }`).

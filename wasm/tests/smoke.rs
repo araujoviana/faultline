@@ -25,3 +25,31 @@ fn unknown_kind_is_an_error() {
     let mut studio = Studio::new();
     assert!(studio.add_resource("nope", "x", 0.0, 0.0).is_err());
 }
+
+#[wasm_bindgen_test]
+fn az_failure_blast_radius_runs_on_the_real_wasm() {
+    let mut studio = Studio::new();
+    let lb = studio
+        .add_resource("load-balancer", "edge", 0.0, 0.0)
+        .unwrap();
+    let api = studio.add_resource("compute", "api", 0.0, 0.0).unwrap();
+    let db = studio.add_resource("database", "orders", 0.0, 0.0).unwrap();
+    studio.connect(&lb, &api).unwrap();
+    studio.connect(&api, &db).unwrap();
+    studio
+        .configure(
+            &db,
+            Some("rds-single-az".into()),
+            Some("us-east-1".into()),
+            Some("us-east-1a".into()),
+        )
+        .unwrap();
+
+    let report = studio.simulate_failure("us-east-1", "us-east-1a").unwrap();
+    assert!(report.contains("database-1"));
+    assert!(report.contains("compute-1"));
+    assert!(report.contains("load-balancer-1"));
+
+    let spofs = studio.find_spofs();
+    assert!(spofs.contains("database-1"));
+}
