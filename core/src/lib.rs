@@ -13,6 +13,9 @@ use std::str::FromStr;
 
 use serde::{Deserialize, Serialize};
 
+pub mod analysis;
+pub mod profile;
+
 /// A vendor-neutral cloud building block.
 ///
 /// The first-pass provider (AWS / GCP) is deliberately not modelled yet; these

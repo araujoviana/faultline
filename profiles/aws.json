@@ -1,0 +1,21 @@
+{
+  "provider": "aws",
+  "display_name": "Amazon Web Services",
+  "regions": [
+    { "id": "us-east-1", "azs": ["us-east-1a", "us-east-1b", "us-east-1c"] },
+    { "id": "eu-west-1", "azs": ["eu-west-1a", "eu-west-1b", "eu-west-1c"] }
+  ],
+  "variants": {
+    "compute": [{ "id": "ec2-asg", "display_name": "EC2 + Auto Scaling Group" }],
+    "database": [
+      { "id": "rds-single-az", "display_name": "RDS (Single-AZ)", "spof": true },
+      { "id": "rds-multi-az", "display_name": "RDS (Multi-AZ)", "failover_seconds": 90 },
+      { "id": "aurora", "display_name": "Aurora", "failover_seconds": 30 }
+    ],
+    "load-balancer": [{ "id": "alb", "display_name": "Application Load Balancer" }],
+    "object-store": [{ "id": "s3", "display_name": "Amazon S3" }],
+    "cache": [
+      { "id": "elasticache", "display_name": "ElastiCache (Multi-AZ)", "failover_seconds": 60 }
+    ]
+  }
+}
