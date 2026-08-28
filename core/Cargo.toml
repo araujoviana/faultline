@@ -1,0 +1,17 @@
+[package]
+name = "strata-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Pure compute core for the Strata cloud-architecture studio: graph model, validation."
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

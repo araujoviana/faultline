@@ -1,0 +1,24 @@
+[package]
+name = "strata-wasm"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+description = "Thin wasm-bindgen binding layer exposing strata-core to the browser."
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+strata-core = { path = "../core" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+wasm-bindgen = "0.2"
+console_error_panic_hook = { version = "0.1", optional = true }
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"
