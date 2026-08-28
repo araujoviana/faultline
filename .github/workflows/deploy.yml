@@ -26,10 +26,9 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # >>> CHANGE ME <<<  Product name is not finalized. This is the ONLY place the
-  # Cloudflare Pages project name is written; it must match the project created
-  # in the Cloudflare dashboard (see DEPLOY.md).
-  CF_PAGES_PROJECT: strata-studio
+  # The ONLY place the Cloudflare Pages project name is written; it must match
+  # the project created in the Cloudflare dashboard (see DEPLOY.md).
+  CF_PAGES_PROJECT: faultline
 
 jobs:
   deploy:

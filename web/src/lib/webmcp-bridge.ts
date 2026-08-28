@@ -63,7 +63,7 @@ async function ensureModelContext(): Promise<boolean> {
 export async function registerTools(tools: WebMcpTool[]): Promise<AbortController> {
   const controller = new AbortController();
   if (!(await ensureModelContext())) {
-    console.warn("[strata] document.modelContext unavailable — tools not registered");
+    console.warn("[faultline] document.modelContext unavailable — tools not registered");
     return controller;
   }
   // The polyfill's `registerTool` overloads are heavily generic; a structural

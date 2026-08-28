@@ -38,7 +38,13 @@ onMount(() => {
 </script>
 
 <header>
-  <span class="brand">Strata</span>
+  <span class="brand">
+    <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M0 0 H19 V9 H14 V19 H20 V30 H15 V32 H0 Z" fill="#8b5cf6" />
+      <path d="M21 0 H32 V32 H17 V30 H22 V19 H16 V9 H21 Z" fill="#6d28d9" />
+    </svg>
+    Faultline
+  </span>
   <nav>
     <a href="/" aria-current={path === "/learn" ? undefined : "page"} onclick={(e) => go("/", e)}>
       Canvas
@@ -66,8 +72,16 @@ onMount(() => {
     border-bottom: 1px solid var(--line);
   }
   .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-weight: 700;
     letter-spacing: 0.02em;
+  }
+  .mark {
+    width: 1.1em;
+    height: 1.1em;
+    border-radius: 4px;
   }
   nav {
     display: flex;

@@ -1,6 +1,7 @@
-# strata-web
+# faultline-web
 
-The Svelte 5 + Vite shell for **Strata** — the design → simulate → harden cloud-architecture studio.
+The Svelte 5 + Vite shell for **Faultline** — the design → simulate → harden cloud-architecture studio.
+(The Rust crates keep the `strata-*` codename internally; `strata_wasm` is the wasm-pack output name.)
 
 ## Commands
 
@@ -23,7 +24,7 @@ SPA fallback.
 | Path | What |
 |---|---|
 | `src/lib/core.ts` | `StudioCore` interface + `createMemoryCore` (used by the vitest contract tests) |
-| `src/lib/wasm-core.ts` | `loadWasmCore()` — adapter over the real `strata-wasm` build; on the default path in `main.ts` |
+| `src/lib/wasm-core.ts` | `loadWasmCore()` — adapter over the real `strata-wasm` crate build; on the default path in `main.ts` |
 | `src/lib/studio.svelte.ts` | reactive store: `$state` snapshot + single undo stack (human + agent edits) |
 | `src/lib/webmcp-bridge.ts` | `registerTool` shim, feature-detect + dev polyfill, activity-log instrumentation |
 | `src/lib/activity.svelte.ts` | the agent-activity log |

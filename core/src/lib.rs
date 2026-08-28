@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
 
-//! Pure compute core for the **Strata** cloud-architecture studio.
+//! Pure compute core for **Faultline**, the cloud-architecture studio.
+//! (The `strata-*` crate names are a legacy codename.)
 //!
 //! This crate is a plain `input -> output` library: an in-memory architecture
 //! graph plus validation. No async, no I/O, no framework. It is the single

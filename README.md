@@ -1,10 +1,19 @@
-# webmcp-hackathon
+# Faultline
+
+**You and your agent design a cloud architecture on a canvas, then make the ground move** — simulate
+an availability-zone failure, watch the blast radius spread, and harden the design against cited
+architectural principles.
 
 A **Rust-based submission to the [OpenAI WebMCP Challenge](https://openai.com/webmcp-challenge/)** — a
 web app that gets meaningfully better when a human and their AI agent use it together, built on
-[WebMCP](https://webmachinelearning.github.io/webmcp/).
+[WebMCP](https://webmachinelearning.github.io/webmcp/). The human sets goals and picks trade-offs; the
+agent proposes topology, wires dependencies, runs the simulation, and explains the failures — through
+WebMCP tools registered on `document.modelContext`.
 
-> **Status:** early scaffolding.
+**Design → Simulate → Harden.** The compute core (graph model, blast-radius analysis, resilience
+lint) is a pure Rust library compiled to WASM; the shell is Svelte 5.
+
+> **Status:** pre-submission. Deadline 2026-09-03.
 
 ## What is WebMCP?
 

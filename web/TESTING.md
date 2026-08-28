@@ -1,4 +1,4 @@
-# Manual browser test checklist — Strata WebMCP
+# Manual browser test checklist — Faultline WebMCP
 
 The automated `e2e/demo.spec.ts` (Playwright, Chromium) drives this exact flow through the
 `@mcp-b/global` polyfill. This document is for verifying the same flow in a **real** WebMCP

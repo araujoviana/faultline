@@ -24,10 +24,9 @@ into `web/dist/` by Vite and applied by Cloudflare Pages automatically.
    - Cloudflare dashboard -> *Workers & Pages* -> *Create* -> *Pages* ->
      *Create using direct upload* (Wrangler). Do **not** connect it to the Git
      repo — the GitHub Action pushes builds via `wrangler pages deploy`.
-   - Project name: **`strata-studio`** (placeholder — the product name is not
-     finalized). If you pick another name it must match `CF_PAGES_PROJECT` in
-     `.github/workflows/deploy.yml` (single `env:` value near the top, marked
-     `>>> CHANGE ME <<<`).
+   - Project name: **`faultline`**. If you pick another name it must match
+     `CF_PAGES_PROJECT` in `.github/workflows/deploy.yml` (single `env:` value
+     near the top).
    - After the first deploy, in *Settings -> Builds & deployments* confirm the
      **Production branch** is `main`. Deploys wrangler makes on any other branch
      become previews automatically.
@@ -48,7 +47,7 @@ into `web/dist/` by Vite and applied by Cloudflare Pages automatically.
 
 5. **First run**: merge this branch, or trigger *Actions -> Deploy ->
    Run workflow* (`workflow_dispatch`). Verify the production URL
-   (`https://strata-studio.pages.dev` or your project name) loads the canvas and
+   (`https://faultline.pages.dev` or your project name) loads the canvas and
    `/<url>/learn` loads on a hard refresh.
 
 ## Out of scope here
