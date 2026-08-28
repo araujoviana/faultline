@@ -5,7 +5,9 @@
 
 # WASM / frontend build output
 /dist
+web/dist
 /pkg
+web/src/lib/wasm/
 .trunk
 *.wasm
 

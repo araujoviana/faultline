@@ -1,0 +1,32 @@
+{
+  "name": "strata-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "check": "svelte-check --tsconfig ./tsconfig.app.json",
+    "lint": "biome check .",
+    "build:wasm": "wasm-pack build ../wasm --release --target web --out-dir ../web/src/lib/wasm --out-name strata_wasm"
+  },
+  "dependencies": {
+    "@mcp-b/global": "^5.0.1"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.5.11",
+    "@mcp-b/webmcp-types": "^5.0.1",
+    "@sveltejs/vite-plugin-svelte": "^7.3.0",
+    "@tsconfig/svelte": "^5.0.8",
+    "@types/node": "^24.13.3",
+    "jsdom": "^30.0.1",
+    "svelte": "^5.56.10",
+    "svelte-check": "^4.7.6",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.2",
+    "vite-plugin-wasm": "^3.6.0",
+    "vitest": "^4.1.11"
+  }
+}
