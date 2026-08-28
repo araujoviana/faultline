@@ -69,6 +69,20 @@ impl FromStr for ResourceKind {
     }
 }
 
+/// Where a resource lives in the provider's topology.
+///
+/// `az == Some` is a single zone (a zonal deployment); `az == None` with
+/// `region == Some` is spread across the region's zones; both `None` means
+/// unplaced (or a global service). The strings are validated against the active
+/// [`profile::ProviderProfile`] at the binding layer, not here.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct Placement {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub region: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub az: Option<String>,
+}
+
 /// A placed resource on the canvas.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Resource {
@@ -77,6 +91,12 @@ pub struct Resource {
     pub label: String,
     pub x: f64,
     pub y: f64,
+    /// Provider-specific service choice, e.g. `"rds-multi-az"`. `None` until the
+    /// design is mapped onto a concrete provider.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub variant: Option<String>,
+    #[serde(default)]
+    pub placement: Placement,
 }
 
 /// A directed dependency `from -> to` (e.g. load balancer -> compute).
@@ -95,6 +115,7 @@ pub enum ArchError {
     DuplicateEdge { from: String, to: String },
     DuplicateId(String),
     DanglingEdge { from: String, to: String },
+    AzWithoutRegion(String),
 }
 
 impl fmt::Display for ArchError {
@@ -109,6 +130,12 @@ impl fmt::Display for ArchError {
             ArchError::DuplicateId(id) => write!(f, "duplicate resource id: {id}"),
             ArchError::DanglingEdge { from, to } => {
                 write!(f, "edge {from} -> {to} references a missing resource")
+            }
+            ArchError::AzWithoutRegion(id) => {
+                write!(
+                    f,
+                    "cannot place {id} in an availability zone without a region"
+                )
             }
         }
     }
@@ -156,8 +183,40 @@ impl Architecture {
             label: label.into(),
             x,
             y,
+            variant: None,
+            placement: Placement::default(),
         });
         id
+    }
+
+    /// Set (or clear, with `None`) a resource's provider-specific variant.
+    pub fn set_variant(&mut self, id: &str, variant: Option<String>) -> Result<(), ArchError> {
+        let resource = self
+            .resources
+            .iter_mut()
+            .find(|r| r.id == id)
+            .ok_or_else(|| ArchError::UnknownResource(id.to_string()))?;
+        resource.variant = variant;
+        Ok(())
+    }
+
+    /// Set a resource's placement. `az` without `region` is rejected as nonsense.
+    pub fn place(
+        &mut self,
+        id: &str,
+        region: Option<String>,
+        az: Option<String>,
+    ) -> Result<(), ArchError> {
+        if az.is_some() && region.is_none() {
+            return Err(ArchError::AzWithoutRegion(id.to_string()));
+        }
+        let resource = self
+            .resources
+            .iter_mut()
+            .find(|r| r.id == id)
+            .ok_or_else(|| ArchError::UnknownResource(id.to_string()))?;
+        resource.placement = Placement { region, az };
+        Ok(())
     }
 
     /// Connect `from -> to`. Rejects self-loops, unknown endpoints, and duplicates.
@@ -362,5 +421,56 @@ mod tests {
         let json = serde_json::to_string(&a).unwrap();
         let back: Architecture = serde_json::from_str(&json).unwrap();
         assert_eq!(a, back);
+    }
+
+    #[test]
+    fn set_variant_and_place_happy_path() {
+        let mut a = Architecture::new();
+        let db = a.add_resource(ResourceKind::Database, "orders", 0.0, 0.0);
+        a.set_variant(&db, Some("rds-multi-az".into())).unwrap();
+        a.place(&db, Some("us-east-1".into()), Some("us-east-1a".into()))
+            .unwrap();
+        let r = &a.resources[0];
+        assert_eq!(r.variant.as_deref(), Some("rds-multi-az"));
+        assert_eq!(r.placement.region.as_deref(), Some("us-east-1"));
+        assert_eq!(r.placement.az.as_deref(), Some("us-east-1a"));
+
+        a.set_variant(&db, None).unwrap();
+        assert_eq!(a.resources[0].variant, None);
+    }
+
+    #[test]
+    fn set_variant_and_place_reject_unknown_id() {
+        let mut a = Architecture::new();
+        assert_eq!(
+            a.set_variant("ghost-1", Some("x".into())),
+            Err(ArchError::UnknownResource("ghost-1".into()))
+        );
+        assert_eq!(
+            a.place("ghost-1", Some("us-east-1".into()), None),
+            Err(ArchError::UnknownResource("ghost-1".into()))
+        );
+    }
+
+    #[test]
+    fn place_rejects_az_without_region() {
+        let mut a = Architecture::new();
+        let db = a.add_resource(ResourceKind::Database, "orders", 0.0, 0.0);
+        assert_eq!(
+            a.place(&db, None, Some("us-east-1a".into())),
+            Err(ArchError::AzWithoutRegion(db))
+        );
+    }
+
+    #[test]
+    fn pre_session_json_without_variant_or_placement_still_loads() {
+        // A document serialised before variants/placement existed.
+        let a: Architecture = serde_json::from_str(
+            r#"{"resources":[{"id":"compute-1","kind":"compute","label":"api","x":1,"y":2}],
+                "edges":[]}"#,
+        )
+        .unwrap();
+        assert_eq!(a.resources[0].variant, None);
+        assert_eq!(a.resources[0].placement, Placement::default());
     }
 }
