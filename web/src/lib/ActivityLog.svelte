@@ -12,7 +12,7 @@ function time(ts: number) {
     <p class="empty">No tool calls yet.</p>
   {:else}
     <ul>
-      {#each activity.entries as entry (entry.ts)}
+      {#each activity.entries as entry (entry.id)}
         <li class:err={!entry.ok}>
           <div class="row">
             <code>{entry.tool}</code>
