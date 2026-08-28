@@ -6,20 +6,20 @@ The Svelte 5 + Vite shell for **Strata** — the design → simulate → harden 
 
 ```sh
 bun install
-bun run dev        # dev server (installs the @mcp-b/global WebMCP polyfill automatically)
+bun run dev        # build:wasm, then the dev server (+ @mcp-b/global WebMCP polyfill)
 bun run test       # vitest — WebMCP tool contract tests
 bun run check      # svelte-check / typecheck
 bun run lint       # biome (config lives at the repo root)
-bun run build      # production bundle -> dist/
-bun run build:wasm # compile ../wasm to src/lib/wasm/ (needs wasm-pack)
+bun run build      # build:wasm, then the production bundle -> dist/
+bun run build:wasm # compile ../wasm to src/lib/wasm/ (needs wasm-pack; runs in predev/prebuild)
 ```
 
 ## Layout
 
 | Path | What |
 |---|---|
-| `src/lib/core.ts` | `StudioCore` interface + `createMemoryCore` (temporary stand-in for the Rust WASM core) |
-| `src/lib/wasm-core.ts` | adapter over the real `strata-wasm` build (not yet on the default path) |
+| `src/lib/core.ts` | `StudioCore` interface + `createMemoryCore` (used by the vitest contract tests) |
+| `src/lib/wasm-core.ts` | `loadWasmCore()` — adapter over the real `strata-wasm` build; on the default path in `main.ts` |
 | `src/lib/studio.svelte.ts` | reactive store: `$state` snapshot + single undo stack (human + agent edits) |
 | `src/lib/webmcp-bridge.ts` | `registerTool` shim, feature-detect + dev polyfill, activity-log instrumentation |
 | `src/lib/activity.svelte.ts` | the agent-activity log |

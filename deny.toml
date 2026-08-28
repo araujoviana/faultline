@@ -28,6 +28,8 @@ confidence-threshold = 0.9
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Workspace-internal path deps (strata-core) are version-less by design.
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"

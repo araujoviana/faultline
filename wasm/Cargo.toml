@@ -6,6 +6,7 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "Thin wasm-bindgen binding layer exposing strata-core to the browser."
+publish = false
 
 [lib]
 crate-type = ["cdylib", "rlib"]

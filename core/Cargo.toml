@@ -6,6 +6,7 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 description = "Pure compute core for the Strata cloud-architecture studio: graph model, validation."
+publish = false
 
 [lints.rust]
 unsafe_code = "forbid"
