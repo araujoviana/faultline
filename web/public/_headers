@@ -1,0 +1,29 @@
+# Cloudflare Pages headers. Applied to the deployed static site.
+# https://developers.cloudflare.com/pages/configuration/headers/
+
+# Serve WebAssembly with the correct MIME type so the browser can use
+# `WebAssembly.instantiateStreaming` (wasm-bindgen falls back to a slower path
+# and logs a warning otherwise).
+/*.wasm
+  Content-Type: application/wasm
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+  # Content-Security-Policy notes for this app:
+  #   - It is a fully self-hosted static SPA: no CDNs, no analytics, no Google
+  #     Fonts (the UI uses system-ui / ui-monospace stacks), no external images
+  #     or network calls. Hence `default-src 'self'` with everything narrowed.
+  #   - `script-src` includes `'wasm-unsafe-eval'`: instantiating the Rust/WASM
+  #     core counts as eval under CSP and needs this token (it does NOT allow JS
+  #     eval / new Function). No `'unsafe-inline'` — the Vite build emits only
+  #     external module scripts.
+  #   - `style-src` allows `'unsafe-inline'`: Svelte's scoped styles ship in the
+  #     CSS bundle, but the Svelte 5 client runtime can still inject small inline
+  #     <style>/style attributes. Inline style is low-risk; keeping it avoids a
+  #     fragile CSP. Tighten to a nonce/hash later if desired.
+  #   - The WebMCP polyfill (@mcp-b/global) is dev-only and not in the bundle.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests

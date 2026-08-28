@@ -1,0 +1,8 @@
+# Cloudflare Pages redirects.
+# https://developers.cloudflare.com/pages/configuration/redirects/
+#
+# SPA fallback: App.svelte does client-side routing off window.location.pathname
+# (e.g. `/learn`). Static assets and real files are served first; any other path
+# is rewritten to index.html with a 200 so a direct load / refresh of a client
+# route works.
+/*  /index.html  200
