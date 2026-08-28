@@ -1,15 +1,47 @@
 <script lang="ts">
 import ActivityLog from "./lib/ActivityLog.svelte";
-import { RESOURCE_KINDS } from "./lib/core";
+import { RESOURCE_KINDS, type ResourceNode } from "./lib/core";
 import type { StudioStore } from "./lib/studio.svelte";
 
 let { studio }: { studio: StudioStore } = $props();
 
 const NODE_W = 120;
-const NODE_H = 44;
+const NODE_H = 48;
 
 function nodeById(id: string) {
   return studio.state.resources.find((r) => r.id === id);
+}
+
+function variantName(node: ResourceNode): string {
+  const list = studio.profile.variants[node.kind] ?? [];
+  return list.find((v) => v.id === node.variant)?.display_name ?? node.variant ?? "";
+}
+
+function placementBadge(node: ResourceNode): string {
+  return node.placement?.az ?? node.placement?.region ?? "unplaced";
+}
+
+function status(id: string): "down" | "degraded" | "" {
+  const r = studio.lastReport;
+  if (!r) return "";
+  if (r.down.includes(id)) return "down";
+  if (r.degraded.includes(id)) return "degraded";
+  return "";
+}
+
+const spofIds = $derived(new Set(studio.spofs.map((s) => s.id)));
+
+const zones = $derived(
+  studio.profile.regions.flatMap((r) => r.azs.map((az) => ({ region: r.id, az }))),
+);
+let selectedZone = $state("");
+$effect(() => {
+  if (!selectedZone && zones.length) selectedZone = `${zones[0].region}|${zones[0].az}`;
+});
+
+function runSimulation() {
+  const [region, az] = selectedZone.split("|");
+  if (region && az) studio.simulateFailure(region, az);
 }
 </script>
 
@@ -20,39 +52,73 @@ function nodeById(id: string) {
       <button onclick={() => studio.addResource(kind, kind)}>+ {kind}</button>
     {/each}
     <hr />
+    <h2>Simulate</h2>
+    {#if zones.length}
+      <select bind:value={selectedZone} aria-label="Availability zone to fail">
+        {#each zones as z (z.region + z.az)}
+          <option value={`${z.region}|${z.az}`}>{z.az}</option>
+        {/each}
+      </select>
+      <button onclick={runSimulation}>Fail this AZ</button>
+    {/if}
+    <button onclick={() => studio.findSpofs()}>Scan for SPOFs</button>
+    <hr />
     <button disabled={!studio.canUndo} onclick={() => studio.undo()}>Undo</button>
     <button class="ghost" onclick={() => studio.reset()}>Reset</button>
   </aside>
 
-  <svg class="canvas" viewBox="0 0 700 620" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Architecture canvas">
-    {#each studio.state.edges as edge (edge.from + "->" + edge.to)}
-      {@const a = nodeById(edge.from)}
-      {@const b = nodeById(edge.to)}
-      {#if a && b}
-        <line
-          x1={a.x + NODE_W / 2}
-          y1={a.y + NODE_H / 2}
-          x2={b.x + NODE_W / 2}
-          y2={b.y + NODE_H / 2}
-          class="edge"
-        />
-      {/if}
-    {/each}
-
-    {#each studio.state.resources as node (node.id)}
-      <g transform="translate({node.x} {node.y})">
-        <rect width={NODE_W} height={NODE_H} rx="9" class="node" data-kind={node.kind} />
-        <text x={NODE_W / 2} y="19" class="label">{node.label}</text>
-        <text x={NODE_W / 2} y="34" class="kind">{node.kind}</text>
-      </g>
-    {/each}
-
-    {#if studio.state.resources.length === 0}
-      <text x="350" y="310" class="hint">
-        Add a resource — or ask your agent to.
-      </text>
+  <div class="stage">
+    {#if studio.lastReport}
+      {@const r = studio.lastReport}
+      <div class="banner" role="status">
+        <strong>{r.target}</strong> — {r.down.length} down, {r.degraded.length} degraded
+        <button class="ghost" onclick={() => studio.clearAnalysis()}>Clear</button>
+      </div>
     {/if}
-  </svg>
+
+    <svg class="canvas" viewBox="0 0 700 620" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Architecture canvas">
+      {#each studio.state.edges as edge (edge.from + "->" + edge.to)}
+        {@const a = nodeById(edge.from)}
+        {@const b = nodeById(edge.to)}
+        {#if a && b}
+          <line
+            x1={a.x + NODE_W / 2}
+            y1={a.y + NODE_H / 2}
+            x2={b.x + NODE_W / 2}
+            y2={b.y + NODE_H / 2}
+            class="edge"
+          />
+        {/if}
+      {/each}
+
+      {#each studio.state.resources as node (node.id)}
+        <g transform="translate({node.x} {node.y})" class="node-group" data-status={status(node.id)}>
+          {#if spofIds.has(node.id)}
+            <rect
+              x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="12"
+              class="spof-ring"
+            />
+          {/if}
+          <rect width={NODE_W} height={NODE_H} rx="9" class="node" data-kind={node.kind} />
+          <text x={NODE_W / 2} y="16" class="label">{node.label}</text>
+          <text x={NODE_W / 2} y="29" class="variant">{variantName(node) || node.kind}</text>
+          <text x={NODE_W / 2} y="41" class="badge">{placementBadge(node)}</text>
+        </g>
+      {/each}
+
+      {#if studio.state.resources.length === 0}
+        <text x="350" y="310" class="hint">
+          Add a resource — or ask your agent to.
+        </text>
+      {/if}
+    </svg>
+
+    <div class="legend">
+      <span class="swatch down"></span> down
+      <span class="swatch degraded"></span> degraded
+      <span class="swatch spof"></span> single point of failure
+    </div>
+  </div>
 
   <ActivityLog />
 </div>
@@ -60,7 +126,7 @@ function nodeById(id: string) {
 <style>
   .layout {
     display: grid;
-    grid-template-columns: 9rem 1fr 18rem;
+    grid-template-columns: 10rem 1fr 18rem;
     gap: 1rem;
     align-items: start;
   }
@@ -79,14 +145,34 @@ function nodeById(id: string) {
   .palette button {
     text-align: left;
   }
+  .palette select {
+    width: 100%;
+  }
   .palette hr {
     border: none;
     border-top: 1px solid var(--line);
     margin: 0.4rem 0;
   }
+  .stage {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .banner {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 0.85rem;
+  }
+  .banner button {
+    margin-left: auto;
+  }
   .canvas {
     width: 100%;
-    height: 70vh;
+    height: 66vh;
     border: 1px solid var(--line);
     border-radius: 12px;
     background:
@@ -102,18 +188,39 @@ function nodeById(id: string) {
   .node[data-kind="queue"] { stroke: #d98324; }
   .node[data-kind="object-store"] { stroke: #4a8ddc; }
   .node[data-kind="cache"] { stroke: #d94a7a; }
+  .node-group[data-status="down"] .node {
+    fill: #f8d7da;
+    stroke: #c0392b;
+    stroke-width: 2.5;
+  }
+  .node-group[data-status="degraded"] .node {
+    fill: #fdf0d5;
+    stroke: #d98324;
+    stroke-width: 2.5;
+  }
+  .spof-ring {
+    fill: none;
+    stroke: #c0392b;
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+  }
   .label {
     text-anchor: middle;
     font-size: 11px;
     font-weight: 600;
     fill: var(--fg);
   }
-  .kind {
+  .variant {
     text-anchor: middle;
     font-size: 8px;
     fill: var(--muted);
+  }
+  .badge {
+    text-anchor: middle;
+    font-size: 7.5px;
+    fill: var(--muted);
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
   }
   .edge {
     stroke: var(--muted);
@@ -124,4 +231,23 @@ function nodeById(id: string) {
     fill: var(--muted);
     font-size: 13px;
   }
+  .legend {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+  .legend .swatch {
+    width: 0.8rem;
+    height: 0.8rem;
+    border-radius: 3px;
+    display: inline-block;
+  }
+  .legend .swatch:not(:first-child) {
+    margin-left: 0.75rem;
+  }
+  .swatch.down { background: #f8d7da; border: 1.5px solid #c0392b; }
+  .swatch.degraded { background: #fdf0d5; border: 1.5px solid #d98324; }
+  .swatch.spof { background: transparent; border: 1.5px dashed #c0392b; }
 </style>
