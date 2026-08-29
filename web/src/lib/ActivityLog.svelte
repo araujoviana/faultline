@@ -31,8 +31,13 @@ function time(ts: number) {
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 0.75rem;
-    max-height: 70vh;
+    max-height: min(70vh, 34rem);
     overflow-y: auto;
+  }
+  @media (max-width: 1100px) {
+    .activity {
+      max-height: 22rem;
+    }
   }
   h2 {
     font-size: 0.7rem;

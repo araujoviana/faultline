@@ -83,6 +83,33 @@ function demo(page: Page, name: string, input: Record<string, unknown>): Promise
   );
 }
 
+test("layout holds at phone and ultra-wide widths without horizontal overflow", async ({
+  page,
+}) => {
+  const noHScroll = () =>
+    page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1);
+
+  // Phone portrait: everything stacks, nothing bleeds off the right edge.
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto("/");
+  await expect(page.locator("svg.canvas")).toBeVisible();
+  await expect(page.locator("aside.palette")).toBeVisible();
+  expect(await noHScroll(), "no horizontal scroll at 375px").toBe(true);
+
+  await page.goto("/learn");
+  await expect(page.locator("section.learn")).toBeVisible();
+  expect(await noHScroll(), "no horizontal scroll on /learn at 375px").toBe(true);
+
+  // Ultra-wide: the working column is capped, not stretched across the viewport.
+  await page.setViewportSize({ width: 2560, height: 1440 });
+  await page.goto("/");
+  await expect(page.locator("svg.canvas")).toBeVisible();
+  const mainWidth = await page.locator("main").evaluate((el) => el.getBoundingClientRect().width);
+  expect(mainWidth, "main content is capped well under 2560px").toBeLessThan(1900);
+
+  await expect(page.locator("footer a[href*='github.com']")).toBeVisible();
+});
+
 test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => {
   const errors = trackErrors(page);
 

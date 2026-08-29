@@ -34,7 +34,8 @@ body {
   min-height: 100vh;
 }
 
-button {
+button,
+select {
   font: inherit;
   color: var(--fg);
   background: var(--code-bg);
@@ -44,7 +45,8 @@ button {
   cursor: pointer;
 }
 
-button:hover:not(:disabled) {
+button:hover:not(:disabled),
+select:hover {
   border-color: var(--node-stroke);
 }
 
@@ -55,6 +57,12 @@ button:disabled {
 
 button.ghost {
   background: transparent;
+}
+
+:where(a, button, select, [tabindex]):focus-visible {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 code {

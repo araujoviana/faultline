@@ -48,9 +48,11 @@ function runSimulation() {
 <div class="layout">
   <aside class="palette">
     <h2>Add</h2>
-    {#each RESOURCE_KINDS as kind (kind)}
-      <button onclick={() => studio.addResource(kind, kind)}>+ {kind}</button>
-    {/each}
+    <div class="kind-list">
+      {#each RESOURCE_KINDS as kind (kind)}
+        <button onclick={() => studio.addResource(kind, kind)}>+ {kind}</button>
+      {/each}
+    </div>
     <hr />
     <h2>Simulate</h2>
     {#if zones.length}
@@ -62,12 +64,14 @@ function runSimulation() {
       <button onclick={runSimulation}>Fail this AZ</button>
     {/if}
     <button onclick={() => studio.findSpofs()}>Scan for SPOFs</button>
-    <hr />
-    <button disabled={!studio.canUndo} onclick={() => studio.undo()}>Undo</button>
-    <button class="ghost" onclick={() => studio.reset()}>Reset</button>
   </aside>
 
   <div class="stage">
+    <div class="stage-tools">
+      <button disabled={!studio.canUndo} onclick={() => studio.undo()}>Undo</button>
+      <button class="ghost" onclick={() => studio.reset()}>Reset</button>
+    </div>
+
     {#if studio.lastReport}
       {@const r = studio.lastReport}
       <div class="banner" role="status">
@@ -120,21 +124,78 @@ function runSimulation() {
     </div>
   </div>
 
-  <ActivityLog />
+  <div class="activity-col">
+    <ActivityLog />
+  </div>
 </div>
 
 <style>
   .layout {
     display: grid;
-    grid-template-columns: 10rem 1fr 18rem;
+    grid-template-columns: 11rem minmax(0, 1fr) 19rem;
+    grid-template-areas: "palette stage activity";
     gap: 1rem;
     align-items: start;
   }
   .palette {
+    grid-area: palette;
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+    position: sticky;
+    top: 1rem;
   }
+  .stage {
+    grid-area: stage;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .activity-col {
+    grid-area: activity;
+  }
+
+  /* Tablet: activity log drops below the working area. */
+  @media (max-width: 1100px) {
+    .layout {
+      grid-template-columns: 11rem minmax(0, 1fr);
+      grid-template-areas:
+        "palette stage"
+        "activity activity";
+    }
+  }
+
+  /* Phone: everything stacks; the palette becomes a wrapped button bar. */
+  @media (max-width: 720px) {
+    .layout {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "palette"
+        "stage"
+        "activity";
+    }
+    .palette {
+      position: static;
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .palette .kind-list {
+      flex-direction: row;
+      flex-wrap: wrap;
+      max-height: none;
+      overflow: visible;
+    }
+    .palette hr {
+      display: none;
+    }
+    .palette h2 {
+      width: 100%;
+      margin-top: 0.3rem;
+    }
+  }
+
   .palette h2 {
     font-size: 0.7rem;
     text-transform: uppercase;
@@ -152,11 +213,21 @@ function runSimulation() {
     border: none;
     border-top: 1px solid var(--line);
     margin: 0.4rem 0;
+    width: 100%;
   }
-  .stage {
+  /* The Add list scrolls inside itself so a long catalogue never pushes
+     Simulate / SPOF controls off the bottom of the sidebar. */
+  .kind-list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    max-height: 15rem;
+    overflow-y: auto;
+  }
+  .stage-tools {
+    display: flex;
+    gap: 0.4rem;
+    justify-content: flex-end;
   }
   .banner {
     display: flex;
@@ -172,7 +243,7 @@ function runSimulation() {
   }
   .canvas {
     width: 100%;
-    height: 66vh;
+    height: clamp(20rem, 62vh, 44rem);
     border: 1px solid var(--line);
     border-radius: 12px;
     background:
