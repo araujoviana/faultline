@@ -110,6 +110,14 @@ test("layout holds at phone and ultra-wide widths without horizontal overflow", 
   await expect(page.locator("footer a[href*='github.com']")).toBeVisible();
 });
 
+test("empty canvas names both ways in — manual and agent", async ({ page }) => {
+  await page.goto("/");
+  const empty = page.locator("svg.canvas g.empty");
+  await expect(empty).toBeVisible();
+  await expect(empty).toContainText("Design your architecture here");
+  await expect(empty).toContainText("ask your agent");
+});
+
 test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => {
   const errors = trackErrors(page);
 
@@ -147,7 +155,13 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
   await demo(page, "connect", { from: "compute-1", to: "database-1" });
 
   await expect(page.locator("svg.canvas g.node-group")).toHaveCount(3);
-  await expect(page.locator("svg.canvas line.edge")).toHaveCount(2);
+  await expect(page.locator("svg.canvas g.node-group g.glyph")).toHaveCount(3);
+  await expect(page.locator("svg.canvas path.edge")).toHaveCount(2);
+  // edges are directed: from -> to, marked with an arrowhead.
+  await expect(page.locator("svg.canvas path.edge").first()).toHaveAttribute(
+    "marker-end",
+    /edge-arrow/,
+  );
 
   // simulate-failure -> all three down, banner "3 down".
   const outage = await demo(page, "simulate-failure", { region: "us-east-1", az: "us-east-1a" });
@@ -161,7 +175,7 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
   expect(spofs).toContain("compute-1");
   expect(spofs).toContain("load-balancer-1");
   await expect(
-    page.locator('svg.canvas g.node-group:has(rect[data-kind="database"]) rect.spof-ring'),
+    page.locator('svg.canvas g.node-group:has(rect[data-kind="database"]) .spof-ring'),
   ).toHaveCount(1);
 
   // Harden -> Multi-AZ, then re-simulate: DB degrades (~90s), compute + LB healthy.

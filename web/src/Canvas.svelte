@@ -5,8 +5,8 @@ import type { StudioStore } from "./lib/studio.svelte";
 
 let { studio }: { studio: StudioStore } = $props();
 
-const NODE_W = 120;
-const NODE_H = 48;
+const NODE_W = 124;
+const NODE_H = 54;
 
 function nodeById(id: string) {
   return studio.state.resources.find((r) => r.id === id);
@@ -31,6 +31,39 @@ function status(id: string): "down" | "degraded" | "" {
 
 const spofIds = $derived(new Set(studio.spofs.map((s) => s.id)));
 
+/**
+ * Manhattan path between two node boxes, anchored to the box edges. Routes
+ * vertically or horizontally depending on which way the two nodes mostly lie,
+ * with a single bend at the midpoint. Good enough until overlap-avoiding
+ * routing lands (see docs/canvas-constraints.md, decision 7).
+ */
+function edgePath(a: ResourceNode, b: ResourceNode): string {
+  const acx = a.x + NODE_W / 2;
+  const acy = a.y + NODE_H / 2;
+  const bcx = b.x + NODE_W / 2;
+  const bcy = b.y + NODE_H / 2;
+  const dx = bcx - acx;
+  const dy = bcy - acy;
+
+  if (Math.abs(dy) >= Math.abs(dx)) {
+    const y1 = dy > 0 ? a.y + NODE_H : a.y;
+    const y2 = dy > 0 ? b.y : b.y + NODE_H;
+    if (Math.abs(acx - bcx) < 2) return `M${acx} ${y1} L${bcx} ${y2}`;
+    const my = (y1 + y2) / 2;
+    return `M${acx} ${y1} L${acx} ${my} L${bcx} ${my} L${bcx} ${y2}`;
+  }
+
+  const x1 = dx > 0 ? a.x + NODE_W : a.x;
+  const x2 = dx > 0 ? b.x : b.x + NODE_W;
+  if (Math.abs(acy - bcy) < 2) return `M${x1} ${acy} L${x2} ${bcy}`;
+  const mx = (x1 + x2) / 2;
+  return `M${x1} ${acy} L${mx} ${acy} L${mx} ${bcy} L${x2} ${bcy}`;
+}
+
+function dimEdge(from: string, to: string): boolean {
+  return status(from) === "down" || status(to) === "down";
+}
+
 const zones = $derived(
   studio.profile.regions.flatMap((r) => r.azs.map((az) => ({ region: r.id, az }))),
 );
@@ -44,6 +77,40 @@ function runSimulation() {
   if (region && az) studio.simulateFailure(region, az);
 }
 </script>
+
+<!--
+  Neutral glyph set — one per ResourceKind, drawn on a 16x16 grid with
+  stroke = currentColor so a glyph inherits the kind tint or a status colour.
+  Rendered inline (not via a child component or {@html}) so it stays in the
+  SVG namespace. See docs/canvas-constraints.md.
+-->
+{#snippet glyph(kind: string)}
+  {#if kind === "compute"}
+    <rect x="2.5" y="2.5" width="11" height="11" rx="1.6" />
+    <rect x="6" y="6" width="4" height="4" rx="0.5" />
+    <path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15" />
+  {:else if kind === "database"}
+    <ellipse cx="8" cy="4" rx="5" ry="2.1" />
+    <path d="M3 4v8c0 1.15 2.24 2.1 5 2.1s5-.95 5-2.1V4" />
+    <path d="M3 8c0 1.15 2.24 2.1 5 2.1s5-.95 5-2.1" />
+  {:else if kind === "queue"}
+    <rect x="1.5" y="5" width="3.4" height="6" rx="1" />
+    <rect x="6.3" y="5" width="3.4" height="6" rx="1" />
+    <rect x="11.1" y="5" width="3.4" height="6" rx="1" />
+  {:else if kind === "load-balancer"}
+    <circle cx="8" cy="3" r="1.7" />
+    <circle cx="3" cy="13" r="1.7" />
+    <circle cx="13" cy="13" r="1.7" />
+    <path d="M8 4.7 4 11.3M8 4.7l4 6.6" />
+  {:else if kind === "object-store"}
+    <path d="M2.5 4.5h11l-1 8.2a1.4 1.4 0 0 1-1.4 1.3H4.9a1.4 1.4 0 0 1-1.4-1.3z" />
+    <path d="M1.6 4.5h12.8" />
+    <path d="M5.7 4.5c0-2.3 4.6-2.3 4.6 0" />
+  {:else if kind === "cache"}
+    <circle cx="8" cy="9.3" r="5.2" />
+    <path d="M8 9.3V6M6.3 1.6h3.4M8 1.6v2M12.4 4.9l1-1" />
+  {/if}
+{/snippet}
 
 <div class="layout">
   <aside class="palette">
@@ -80,40 +147,82 @@ function runSimulation() {
       </div>
     {/if}
 
-    <svg class="canvas" viewBox="0 0 700 620" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Architecture canvas">
+    <svg
+      class="canvas"
+      viewBox="0 0 700 620"
+      preserveAspectRatio="xMidYMid meet"
+      role="img"
+      aria-label="Architecture canvas"
+    >
+      <defs>
+        <marker
+          id="edge-arrow"
+          viewBox="0 0 10 10"
+          refX="8.5"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M0 0 L10 5 L0 10 z" class="edge-head" />
+        </marker>
+      </defs>
+
       {#each studio.state.edges as edge (edge.from + "->" + edge.to)}
         {@const a = nodeById(edge.from)}
         {@const b = nodeById(edge.to)}
         {#if a && b}
-          <line
-            x1={a.x + NODE_W / 2}
-            y1={a.y + NODE_H / 2}
-            x2={b.x + NODE_W / 2}
-            y2={b.y + NODE_H / 2}
+          <path
+            d={edgePath(a, b)}
             class="edge"
+            class:dim={dimEdge(edge.from, edge.to)}
+            marker-end="url(#edge-arrow)"
           />
         {/if}
       {/each}
 
       {#each studio.state.resources as node (node.id)}
-        <g transform="translate({node.x} {node.y})" class="node-group" data-status={status(node.id)}>
+        <g
+          transform="translate({node.x} {node.y})"
+          class="node-group"
+          data-status={status(node.id)}
+          style="--kc: var(--k-{node.kind})"
+        >
           {#if spofIds.has(node.id)}
-            <rect
-              x="-4" y="-4" width={NODE_W + 8} height={NODE_H + 8} rx="12"
+            <path
               class="spof-ring"
+              d="M{6} {8} h{NODE_W} l{-6} {NODE_H} h{-NODE_W} z"
             />
           {/if}
-          <rect width={NODE_W} height={NODE_H} rx="9" class="node" data-kind={node.kind} />
-          <text x={NODE_W / 2} y="16" class="label">{node.label}</text>
-          <text x={NODE_W / 2} y="29" class="variant">{variantName(node) || node.kind}</text>
-          <text x={NODE_W / 2} y="41" class="badge">{placementBadge(node)}</text>
+
+          <rect width={NODE_W} height={NODE_H} rx="10" class="node" data-kind={node.kind} />
+
+          <line class="strata-line" x1="9" x2={NODE_W - 9} y1="16" y2="16" />
+          <line class="strata-line" x1="9" x2={NODE_W - 9} y1="19.5" y2="19.5" />
+          <line class="strata-line" x1="9" x2={NODE_W - 9} y1="23" y2="23" />
+
+          <rect class="spine" x="0" y="0" width="4" height={NODE_H} rx="2" />
+
+          <rect class="chip" x="9" y="9" width="21" height="21" rx="6" />
+          <g class="glyph" transform="translate(12 12)">
+            {@render glyph(node.kind)}
+          </g>
+
+          <text class="label" x="38" y="22">{node.label}</text>
+          <text class="variant" x="38" y="34">{variantName(node) || node.kind}</text>
+          <text class="badge" x="10" y={NODE_H - 8}>{placementBadge(node)}</text>
         </g>
       {/each}
 
       {#if studio.state.resources.length === 0}
-        <text x="350" y="310" class="hint">
-          Add a resource — or ask your agent to.
-        </text>
+        <g class="empty" text-anchor="middle">
+          <text class="empty-title" x="350" y="284">Design your architecture here</text>
+          <text class="empty-body" x="350" y="311">Add a resource from the palette —</text>
+          <text class="empty-body" x="350" y="329">or ask your agent to propose one.</text>
+          <text class="empty-hint" x="350" y="361">
+            “propose a resilient web stack in us-east-1”
+          </text>
+        </g>
       {/if}
     </svg>
 
@@ -249,59 +358,108 @@ function runSimulation() {
     background:
       radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0 / 24px 24px;
   }
+
+  /* ---- dependency edges: Manhattan, arrow points from -> to ---- */
+  .edge {
+    fill: none;
+    stroke: var(--edge);
+    stroke-width: 1.5;
+    opacity: 0.8;
+  }
+  .edge.dim {
+    opacity: 0.3;
+  }
+  .edge-head {
+    fill: var(--edge);
+  }
+
+  /* ---- Strata node ---- */
   .node {
     fill: var(--node-fill);
-    stroke: var(--node-stroke);
-    stroke-width: 1.5;
+    stroke: var(--line);
+    stroke-width: 1;
   }
-  .node[data-kind="database"] { stroke: #7c5cff; }
-  .node[data-kind="load-balancer"] { stroke: #1aa3a3; }
-  .node[data-kind="queue"] { stroke: #d98324; }
-  .node[data-kind="object-store"] { stroke: #4a8ddc; }
-  .node[data-kind="cache"] { stroke: #d94a7a; }
   .node-group[data-status="down"] .node {
-    fill: #f8d7da;
-    stroke: #c0392b;
-    stroke-width: 2.5;
+    fill: var(--status-down-bg);
   }
   .node-group[data-status="degraded"] .node {
-    fill: #fdf0d5;
-    stroke: #d98324;
-    stroke-width: 2.5;
+    fill: var(--status-degraded-bg);
   }
-  .spof-ring {
+
+  .strata-line {
+    stroke: var(--kc);
+    stroke-width: 1;
+    opacity: 0.13;
+  }
+
+  .spine {
+    fill: var(--node-stroke);
+  }
+  .node-group[data-status="down"] .spine {
+    fill: var(--status-down);
+  }
+  .node-group[data-status="degraded"] .spine {
+    fill: var(--status-degraded);
+  }
+
+  .chip {
+    fill: var(--kc);
+    opacity: 0.16;
+  }
+  .glyph {
     fill: none;
-    stroke: #c0392b;
-    stroke-width: 1.5;
-    stroke-dasharray: 4 3;
+    stroke: var(--kc);
+    stroke-width: 1.35;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
+  .node-group[data-status="down"] .glyph {
+    stroke: var(--status-down);
+  }
+  .node-group[data-status="degraded"] .glyph {
+    stroke: var(--status-degraded);
+  }
+
+  /* SPOF: the card throws an offset, sheared duplicate — a slip. */
+  .spof-ring {
+    fill: var(--spof);
+    opacity: 0.16;
+  }
+
   .label {
-    text-anchor: middle;
+    text-anchor: start;
     font-size: 11px;
     font-weight: 600;
     fill: var(--fg);
   }
   .variant {
-    text-anchor: middle;
+    text-anchor: start;
     font-size: 8px;
     fill: var(--muted);
   }
   .badge {
-    text-anchor: middle;
+    text-anchor: start;
     font-size: 7.5px;
     fill: var(--muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
-  .edge {
-    stroke: var(--muted);
-    stroke-width: 1.5;
+
+  .empty-title {
+    fill: var(--fg);
+    font-size: 15px;
+    font-weight: 700;
   }
-  .hint {
-    text-anchor: middle;
+  .empty-body {
     fill: var(--muted);
-    font-size: 13px;
+    font-size: 11.5px;
   }
+  .empty-hint {
+    fill: var(--muted);
+    font-size: 10.5px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
   .legend {
     display: flex;
     align-items: center;
@@ -318,7 +476,16 @@ function runSimulation() {
   .legend .swatch:not(:first-child) {
     margin-left: 0.75rem;
   }
-  .swatch.down { background: #f8d7da; border: 1.5px solid #c0392b; }
-  .swatch.degraded { background: #fdf0d5; border: 1.5px solid #d98324; }
-  .swatch.spof { background: transparent; border: 1.5px dashed #c0392b; }
+  .swatch.down {
+    background: var(--status-down-bg);
+    border: 1.5px solid var(--status-down);
+  }
+  .swatch.degraded {
+    background: var(--status-degraded-bg);
+    border: 1.5px solid var(--status-degraded);
+  }
+  .swatch.spof {
+    background: var(--spof);
+    opacity: 0.35;
+  }
 </style>

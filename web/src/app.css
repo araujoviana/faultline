@@ -7,6 +7,26 @@
   --node-fill: #fbfbfd;
   --node-stroke: #9aa0b4;
 
+  /* Canvas — dependency edges */
+  --edge: #8b8b96;
+
+  /* Canvas — failure-analysis status (colour is always paired with a second
+     channel: the node's spine, a glyph swap, or the SPOF slip-shadow). */
+  --status-down: #b93b2e;
+  --status-down-bg: #f8dcdb;
+  --status-degraded: #9a6410;
+  --status-degraded-bg: #f6ead0;
+  --spof: #b93b2e;
+
+  /* Canvas — per-kind accent (vendor-neutral). Used for the glyph chip,
+     the strata layer lines, and the healthy glyph stroke. */
+  --k-compute: #6b7280;
+  --k-database: #7c5cff;
+  --k-queue: #cf7a1e;
+  --k-load-balancer: #12908f;
+  --k-object-store: #3d7fd0;
+  --k-cache: #cf4372;
+
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color: var(--fg);
@@ -22,6 +42,21 @@
     --code-bg: #1c1c22;
     --node-fill: #1b1b21;
     --node-stroke: #4a4a58;
+
+    --edge: #8b8996;
+
+    --status-down: #e88c82;
+    --status-down-bg: #3a1f20;
+    --status-degraded: #d7a662;
+    --status-degraded-bg: #362a16;
+    --spof: #e88c82;
+
+    --k-compute: #9aa0b4;
+    --k-database: #9d84ff;
+    --k-queue: #e09347;
+    --k-load-balancer: #37b3b2;
+    --k-object-store: #5f9ae4;
+    --k-cache: #e2699a;
   }
 }
 
