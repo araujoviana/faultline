@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addResourceTool } from "../tools/add-resource";
 import { clearActivity } from "./activity.svelte";
 import { createMemoryCore } from "./core";
@@ -7,6 +7,12 @@ import { instrumentTool, registerTools } from "./webmcp-bridge";
 
 describe("registerTools + @mcp-b/global polyfill", () => {
   beforeEach(() => clearActivity());
+
+  // The polyfill defers its `toolchange` dispatch by a `setTimeout(0)`
+  // (BrowserMcpServer.notifyProducerToolsChanged). Drain that macrotask before
+  // the test ends so the dispatch runs inside the still-live jsdom realm rather
+  // than surfacing as an unhandled rejection after teardown.
+  afterEach(() => new Promise((resolve) => setTimeout(resolve, 20)));
 
   it("exposes the tool on document.modelContext and runs it end to end", async () => {
     const studio = createStudio(createMemoryCore());
