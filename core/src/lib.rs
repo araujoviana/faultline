@@ -223,6 +223,18 @@ impl Architecture {
         Ok(())
     }
 
+    /// Move a resource to a new canvas position.
+    pub fn move_resource(&mut self, id: &str, x: f64, y: f64) -> Result<(), ArchError> {
+        let resource = self
+            .resources
+            .iter_mut()
+            .find(|r| r.id == id)
+            .ok_or_else(|| ArchError::UnknownResource(id.to_string()))?;
+        resource.x = x;
+        resource.y = y;
+        Ok(())
+    }
+
     /// Connect `from -> to`. Rejects self-loops, unknown endpoints, and duplicates.
     pub fn connect(&mut self, from: &str, to: &str) -> Result<(), ArchError> {
         if from == to {
@@ -452,6 +464,18 @@ mod tests {
         );
         assert_eq!(
             a.place("ghost-1", Some("us-east-1".into()), None),
+            Err(ArchError::UnknownResource("ghost-1".into()))
+        );
+    }
+
+    #[test]
+    fn move_resource_updates_position_and_rejects_unknown_id() {
+        let mut a = Architecture::new();
+        let n = a.add_resource(ResourceKind::Compute, "api", 0.0, 0.0);
+        a.move_resource(&n, 120.0, 240.0).unwrap();
+        assert_eq!((a.resources[0].x, a.resources[0].y), (120.0, 240.0));
+        assert_eq!(
+            a.move_resource("ghost-1", 1.0, 1.0),
             Err(ArchError::UnknownResource("ghost-1".into()))
         );
     }
