@@ -20,16 +20,15 @@ into `web/dist/` by Vite and applied by Cloudflare Pages automatically.
 
 ## One-time maintainer setup
 
-1. **Create the Cloudflare Pages project** (once):
-   - Cloudflare dashboard -> *Workers & Pages* -> *Create* -> *Pages* ->
-     *Create using direct upload* (Wrangler). Do **not** connect it to the Git
-     repo — the GitHub Action pushes builds via `wrangler pages deploy`.
-   - Project name: **`faultline`**. If you pick another name it must match
-     `CF_PAGES_PROJECT` in `.github/workflows/deploy.yml` (single `env:` value
-     near the top).
-   - After the first deploy, in *Settings -> Builds & deployments* confirm the
-     **Production branch** is `main`. Deploys wrangler makes on any other branch
-     become previews automatically.
+1. **Create the Cloudflare Pages project** (once): **done.**
+   - Direct-upload project **`faultline-studio`**, production branch `main`,
+     public URL <https://faultline-studio.pages.dev> (`faultline.pages.dev` was
+     already registered by a third party). Not Git-connected — the GitHub Action
+     pushes builds via `wrangler pages deploy`.
+   - The project name must match `CF_PAGES_PROJECT` in
+     `.github/workflows/deploy.yml` (single `env:` value near the top).
+   - To recreate from scratch: dashboard -> *Workers & Pages* -> *Create* ->
+     *Pages* -> *Create using direct upload*, or `wrangler pages project create`.
 
 2. **Create a Cloudflare API token**:
    - *My Profile -> API Tokens -> Create Token -> Custom token*.
@@ -39,16 +38,16 @@ into `web/dist/` by Vite and applied by Cloudflare Pages automatically.
 
 3. **Find the Cloudflare Account ID**:
    - *Workers & Pages* overview -> right sidebar -> *Account ID* (32 hex chars).
+   - This is the account that owns the `faultline-studio` project.
 
 4. **Add two GitHub repository secrets**
    (*repo -> Settings -> Secrets and variables -> Actions -> New repository secret*):
    - `CLOUDFLARE_API_TOKEN` = the token from step 2
    - `CLOUDFLARE_ACCOUNT_ID` = the ID from step 3
 
-5. **First run**: merge this branch, or trigger *Actions -> Deploy ->
-   Run workflow* (`workflow_dispatch`). Verify the production URL
-   (`https://faultline.pages.dev` or your project name) loads the canvas and
-   `/<url>/learn` loads on a hard refresh.
+5. **First run**: push to `main`, or trigger *Actions -> Deploy ->
+   Run workflow* (`workflow_dispatch`). Verify <https://faultline-studio.pages.dev>
+   loads the canvas and `/learn` loads on a hard refresh.
 
 ## Out of scope here
 

@@ -28,7 +28,8 @@ concurrency:
 env:
   # The ONLY place the Cloudflare Pages project name is written; it must match
   # the project created in the Cloudflare dashboard (see DEPLOY.md).
-  CF_PAGES_PROJECT: faultline
+  # Public URL: https://faultline-studio.pages.dev (faultline.pages.dev was taken).
+  CF_PAGES_PROJECT: faultline-studio
 
 jobs:
   deploy:
