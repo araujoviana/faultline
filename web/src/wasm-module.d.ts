@@ -9,6 +9,7 @@ declare module "*/wasm/strata_wasm.js" {
     constructor();
     addResource(kind: string, label: string, x: number, y: number): string;
     connect(from: string, to: string): void;
+    moveResource(id: string, x: number, y: number): void;
     removeResource(id: string): void;
     configure(id: string, variant: string, region: string, az: string): void;
     simulateFailure(region: string, az: string): string;
