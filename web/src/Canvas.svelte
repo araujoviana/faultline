@@ -31,6 +31,45 @@ function status(id: string): "down" | "degraded" | "" {
 
 const spofIds = $derived(new Set(studio.spofs.map((s) => s.id)));
 
+// ---- pointer drag: move a node, one undo step on release ----
+let svgEl: SVGSVGElement | undefined = $state();
+let drag = $state<{ id: string; offX: number; offY: number } | null>(null);
+let ghost = $state<{ id: string; x: number; y: number } | null>(null);
+
+function toSvgPoint(e: PointerEvent): { x: number; y: number } | null {
+  if (!svgEl) return null;
+  const ctm = svgEl.getScreenCTM();
+  if (!ctm) return null;
+  const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
+}
+
+function nodePos(node: ResourceNode): { x: number; y: number } {
+  return ghost && ghost.id === node.id ? ghost : { x: node.x, y: node.y };
+}
+
+function startDrag(e: PointerEvent, node: ResourceNode) {
+  const p = toSvgPoint(e);
+  if (!p) return;
+  e.preventDefault();
+  drag = { id: node.id, offX: p.x - node.x, offY: p.y - node.y };
+  ghost = { id: node.id, x: node.x, y: node.y };
+  (e.currentTarget as Element).setPointerCapture(e.pointerId);
+}
+
+function moveDrag(e: PointerEvent) {
+  if (!drag) return;
+  const p = toSvgPoint(e);
+  if (!p) return;
+  ghost = { id: drag.id, x: p.x - drag.offX, y: p.y - drag.offY };
+}
+
+function endDrag() {
+  if (drag && ghost) studio.move(ghost.id, Math.round(ghost.x), Math.round(ghost.y));
+  drag = null;
+  ghost = null;
+}
+
 /**
  * Manhattan path between two node boxes, anchored to the box edges. Routes
  * vertically or horizontally depending on which way the two nodes mostly lie,
@@ -148,6 +187,7 @@ function runSimulation() {
     {/if}
 
     <svg
+      bind:this={svgEl}
       class="canvas"
       viewBox="0 0 700 620"
       preserveAspectRatio="xMidYMid meet"
@@ -182,11 +222,20 @@ function runSimulation() {
       {/each}
 
       {#each studio.state.resources as node (node.id)}
+        {@const pos = nodePos(node)}
         <g
-          transform="translate({node.x} {node.y})"
+          transform="translate({pos.x} {pos.y})"
           class="node-group"
+          class:dragging={drag?.id === node.id}
           data-status={status(node.id)}
           style="--kc: var(--k-{node.kind})"
+          role="button"
+          tabindex="-1"
+          aria-label="{node.label} — drag to reposition"
+          onpointerdown={(e) => startDrag(e, node)}
+          onpointermove={moveDrag}
+          onpointerup={endDrag}
+          onpointercancel={endDrag}
         >
           {#if spofIds.has(node.id)}
             <path
@@ -374,6 +423,17 @@ function runSimulation() {
   }
 
   /* ---- Strata node ---- */
+  .node-group {
+    cursor: grab;
+    touch-action: none;
+  }
+  .node-group.dragging {
+    cursor: grabbing;
+  }
+  .node-group.dragging .node {
+    stroke: var(--kc);
+    stroke-width: 1.5;
+  }
   .node {
     fill: var(--node-fill);
     stroke: var(--line);

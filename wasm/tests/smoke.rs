@@ -27,6 +27,17 @@ fn unknown_kind_is_an_error() {
 }
 
 #[wasm_bindgen_test]
+fn move_resource_updates_position_in_state() {
+    let mut studio = Studio::new();
+    let id = studio.add_resource("compute", "api", 0.0, 0.0).unwrap();
+    studio.move_resource(&id, 128.0, 256.0).unwrap();
+    let state = studio.state_json();
+    assert!(state.contains("\"x\":128"));
+    assert!(state.contains("\"y\":256"));
+    assert!(studio.move_resource("ghost-1", 1.0, 1.0).is_err());
+}
+
+#[wasm_bindgen_test]
 fn az_failure_blast_radius_runs_on_the_real_wasm() {
     let mut studio = Studio::new();
     let lb = studio
