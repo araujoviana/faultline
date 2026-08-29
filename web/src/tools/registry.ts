@@ -4,6 +4,7 @@ import { addResourceTool } from "./add-resource";
 import { configureResourceTool } from "./configure-resource";
 import { connectTool } from "./connect";
 import { findSpofsTool } from "./find-spofs";
+import { moveResourceTool } from "./move-resource";
 import { simulateFailureTool } from "./simulate-failure";
 
 /**
@@ -14,6 +15,7 @@ export function buildToolRegistry(studio: StudioStore): WebMcpTool[] {
   return [
     addResourceTool(studio),
     connectTool(studio),
+    moveResourceTool(studio),
     configureResourceTool(studio),
     simulateFailureTool(studio),
     findSpofsTool(studio),

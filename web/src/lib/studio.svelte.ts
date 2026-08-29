@@ -14,6 +14,8 @@ export interface StudioStore {
   readonly spofs: Spof[];
   addResource(kind: string, label: string, x?: number, y?: number): string;
   connect(from: string, to: string): void;
+  /** Move a resource to a new canvas position (one undo step). */
+  move(id: string, x: number, y: number): void;
   removeResource(id: string): void;
   configure(id: string, variant?: string, region?: string, az?: string): void;
   simulateFailure(region: string, az: string): BlastReport;
@@ -25,8 +27,31 @@ export interface StudioStore {
 
 const EMPTY = JSON.stringify({ resources: [], edges: [] });
 
-function scatter(): number {
-  return 60 + Math.round(Math.random() * 520);
+/**
+ * Deterministic non-overlapping placement for a freshly added resource: walk a
+ * fixed grid and take the first cell that no existing node sits on. Keeps a
+ * brand-new architecture readable before anyone (human or agent) lays it out.
+ */
+const GRID_COLS = 4;
+const GRID_DX = 166;
+const GRID_DY = 92;
+const GRID_X0 = 34;
+const GRID_Y0 = 26;
+
+function gridCell(i: number): { x: number; y: number } {
+  return {
+    x: GRID_X0 + (i % GRID_COLS) * GRID_DX,
+    y: GRID_Y0 + Math.floor(i / GRID_COLS) * GRID_DY,
+  };
+}
+
+function freeCell(taken: Array<{ x: number; y: number }>): { x: number; y: number } {
+  for (let i = 0; i < 48; i++) {
+    const cell = gridCell(i);
+    const clash = taken.some((t) => Math.abs(t.x - cell.x) < 90 && Math.abs(t.y - cell.y) < 56);
+    if (!clash) return cell;
+  }
+  return gridCell(taken.length);
 }
 
 const EMPTY_PROFILE: ProviderProfile = {
@@ -78,15 +103,21 @@ export function createStudio(core: StudioCore): StudioStore {
     get spofs() {
       return spofs;
     },
-    addResource(kind, label, x = scatter(), y = scatter()) {
+    addResource(kind, label, x, y) {
       checkpoint();
-      const id = core.addResource(kind, label, x, y);
+      const spot = x === undefined || y === undefined ? freeCell(snapshot.resources) : { x, y };
+      const id = core.addResource(kind, label, spot.x, spot.y);
       refresh();
       return id;
     },
     connect(from, to) {
       checkpoint();
       core.connect(from, to);
+      refresh();
+    },
+    move(id, x, y) {
+      checkpoint();
+      core.move(id, x, y);
       refresh();
     },
     removeResource(id) {

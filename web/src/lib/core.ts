@@ -76,6 +76,8 @@ export interface ProviderProfile {
 export interface StudioCore {
   addResource(kind: string, label: string, x: number, y: number): string;
   connect(from: string, to: string): void;
+  /** Move a resource to a new canvas position. */
+  move(id: string, x: number, y: number): void;
   removeResource(id: string): void;
   /** Set a resource's provider variant and/or placement. Empty strings = leave unchanged. */
   configure(id: string, variant?: string, region?: string, az?: string): void;
@@ -134,6 +136,12 @@ export function createMemoryCore(): StudioCore {
         throw new Error(`${from} -> ${to} is already connected`);
       }
       state.edges.push({ from, to });
+    },
+    move(id, x, y) {
+      const r = find(id);
+      if (!r) throw new Error(`no such resource: ${id}`);
+      r.x = x;
+      r.y = y;
     },
     removeResource(id) {
       if (!has(id)) throw new Error(`no such resource: ${id}`);

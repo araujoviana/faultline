@@ -15,6 +15,7 @@ export async function loadWasmCore(): Promise<StudioCore> {
   return {
     addResource: (kind, label, x, y) => studio.addResource(kind, label, x, y),
     connect: (from, to) => studio.connect(from, to),
+    move: (id, x, y) => studio.moveResource(id, x, y),
     removeResource: (id) => studio.removeResource(id),
     configure: (id, variant, region, az) =>
       studio.configure(id, variant ?? "", region ?? "", az ?? ""),

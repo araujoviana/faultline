@@ -52,6 +52,12 @@ impl Studio {
         self.inner.connect(from, to).map_err(to_js)
     }
 
+    /// Move a resource to a new canvas position.
+    #[wasm_bindgen(js_name = moveResource)]
+    pub fn move_resource(&mut self, id: &str, x: f64, y: f64) -> Result<(), JsError> {
+        self.inner.move_resource(id, x, y).map_err(to_js)
+    }
+
     /// Remove a resource and its incident edges.
     #[wasm_bindgen(js_name = removeResource)]
     pub fn remove_resource(&mut self, id: &str) -> Result<(), JsError> {

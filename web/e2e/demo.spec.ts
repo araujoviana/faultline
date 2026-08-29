@@ -12,6 +12,7 @@ import { expect, type Page, test } from "@playwright/test";
 const TOOL_NAMES = [
   "add-resource",
   "connect",
+  "move-resource",
   "configure-resource",
   "simulate-failure",
   "find-spofs",
@@ -116,6 +117,29 @@ test("empty canvas names both ways in — manual and agent", async ({ page }) =>
   await expect(empty).toBeVisible();
   await expect(empty).toContainText("Design your architecture here");
   await expect(empty).toContainText("ask your agent");
+});
+
+test("a node can be dragged to a new position", async ({ page }) => {
+  await page.goto("/");
+  await installDriver(page);
+  await demo(page, "add-resource", { kind: "compute", label: "api" });
+
+  const node = page.locator("svg.canvas g.node-group").first();
+  const before = await node.getAttribute("transform");
+  const box = await node.boundingBox();
+  if (!box) throw new Error("node has no bounding box");
+
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 220, box.y + 140, { steps: 10 });
+  await page.mouse.up();
+
+  await expect(node).not.toHaveAttribute("transform", before ?? "");
+
+  // The agent sees the same move surfaced as a tool it can also call.
+  const moved = await demo(page, "move-resource", { id: "compute-1", x: 40, y: 40 });
+  expect(moved).toContain("Moved compute-1 to (40, 40)");
+  await expect(node).toHaveAttribute("transform", "translate(40 40)");
 });
 
 test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => {

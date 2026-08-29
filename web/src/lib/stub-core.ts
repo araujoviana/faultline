@@ -24,6 +24,7 @@ export function makeStubCore(overrides: Partial<StudioCore> = {}): StudioCore {
   return {
     addResource: () => "resource-1",
     connect: () => {},
+    move: () => {},
     removeResource: () => {},
     configure: () => {},
     simulateFailure: () => EMPTY_REPORT,
