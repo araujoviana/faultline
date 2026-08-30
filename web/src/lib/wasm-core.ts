@@ -21,6 +21,7 @@ export async function loadWasmCore(): Promise<StudioCore> {
       studio.configure(id, variant ?? "", region ?? "", az ?? ""),
     simulateFailure: (region, az) => studio.simulateFailure(region, az),
     findSpofs: () => studio.findSpofs(),
+    generateIac: (target) => studio.generateIac(target),
     profileJson: () => studio.profileJson(),
     stateJson: () => studio.stateJson(),
     loadJson: (json) => studio.loadJson(json),

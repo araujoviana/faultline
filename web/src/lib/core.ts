@@ -14,6 +14,10 @@ export const RESOURCE_KINDS = [
   "load-balancer",
   "object-store",
   "cache",
+  "cdn",
+  "dns",
+  "functions",
+  "api-gateway",
 ] as const;
 
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
@@ -85,6 +89,8 @@ export interface StudioCore {
   simulateFailure(region: string, az: string): string;
   /** Current single points of failure; returns a JSON {@link Spof}`[]`. */
   findSpofs(): string;
+  /** Emit the architecture as infrastructure-as-code (read-only). Throws on an unknown target. */
+  generateIac(target: string): string;
   /** The active provider profile as JSON. */
   profileJson(): string;
   stateJson(): string;
@@ -159,6 +165,12 @@ export function createMemoryCore(): StudioCore {
     },
     findSpofs() {
       return "[]";
+    },
+    generateIac(target) {
+      if (target && target !== "terraform") {
+        throw new Error(`unknown target: ${target}. Supported: terraform`);
+      }
+      return "# terraform (memory core stub — the real emitter is tested in the Rust core)";
     },
     profileJson() {
       return JSON.stringify({

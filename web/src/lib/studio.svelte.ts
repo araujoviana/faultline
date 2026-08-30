@@ -20,6 +20,8 @@ export interface StudioStore {
   configure(id: string, variant?: string, region?: string, az?: string): void;
   simulateFailure(region: string, az: string): BlastReport;
   findSpofs(): Spof[];
+  /** Emit the architecture as infrastructure-as-code. Read-only: no mutation, no undo step. */
+  generateIac(target?: string): string;
   clearAnalysis(): void;
   reset(): void;
   undo(): void;
@@ -139,6 +141,9 @@ export function createStudio(core: StudioCore): StudioStore {
       const found = JSON.parse(core.findSpofs()) as Spof[];
       spofs = found;
       return found;
+    },
+    generateIac(target = "terraform") {
+      return core.generateIac(target);
     },
     clearAnalysis() {
       lastReport = null;
