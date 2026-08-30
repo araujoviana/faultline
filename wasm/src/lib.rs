@@ -8,7 +8,7 @@ use std::str::FromStr;
 
 use strata_core::analysis::{az_failure_seed, blast_radius, spofs};
 use strata_core::profile::ProviderProfile;
-use strata_core::{Architecture, ResourceKind};
+use strata_core::{iac, Architecture, ResourceKind};
 use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen(start)]
@@ -144,6 +144,18 @@ impl Studio {
     #[wasm_bindgen(js_name = profileJson)]
     pub fn profile_json(&self) -> String {
         serde_json::to_string(&self.profile).expect("ProviderProfile always serialises")
+    }
+
+    /// Emit the current architecture as infrastructure-as-code (read-only, no
+    /// mutation). Only `"terraform"` (or `""` for the default) is supported.
+    #[wasm_bindgen(js_name = generateIac)]
+    pub fn generate_iac(&self, target: &str) -> Result<String, JsError> {
+        match target {
+            "" | "terraform" => Ok(iac::emit_terraform(&self.inner, &self.profile)),
+            other => Err(JsError::new(&format!(
+                "unknown target: {other}. Supported: terraform"
+            ))),
+        }
     }
 
     /// The full architecture as a JSON string (`{ resources, edges, counters }`).
