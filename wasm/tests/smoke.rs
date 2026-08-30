@@ -78,3 +78,50 @@ fn az_failure_blast_radius_runs_on_the_real_wasm() {
     assert!(report.contains("fail over"));
     assert!(studio.find_spofs().contains("[]"));
 }
+
+#[wasm_bindgen_test]
+fn generate_iac_runs_on_the_real_wasm() {
+    let mut studio = Studio::new();
+    let lb = studio
+        .add_resource("load-balancer", "edge", 0.0, 0.0)
+        .unwrap();
+    let api = studio.add_resource("compute", "api", 0.0, 0.0).unwrap();
+    let db = studio.add_resource("database", "orders", 0.0, 0.0).unwrap();
+    studio.connect(&lb, &api).unwrap();
+    studio.connect(&api, &db).unwrap();
+    studio
+        .configure(&lb, Some("alb".into()), None, None)
+        .unwrap();
+    studio
+        .configure(&api, Some("ec2-asg".into()), None, None)
+        .unwrap();
+    studio
+        .configure(
+            &db,
+            Some("rds-multi-az".into()),
+            Some("us-east-1".into()),
+            None,
+        )
+        .unwrap();
+
+    let hcl = studio.generate_iac("terraform").unwrap();
+    assert!(hcl.contains("terraform {"));
+    assert!(hcl.contains("resource \"aws_db_instance\" \"database_1\""));
+    assert!(hcl.contains("multi_az"));
+    assert!(hcl.contains("target_group_arns"));
+
+    assert!(studio.generate_iac("pulumi").is_err());
+}
+
+#[wasm_bindgen_test]
+fn new_service_kinds_add_and_emit() {
+    let mut studio = Studio::new();
+    for kind in ["cdn", "dns", "functions", "api-gateway"] {
+        assert!(studio.add_resource(kind, kind, 0.0, 0.0).is_ok());
+    }
+    studio
+        .configure("functions-1", Some("lambda".into()), None, None)
+        .unwrap();
+    let hcl = studio.generate_iac("").unwrap();
+    assert!(hcl.contains("resource \"aws_lambda_function\" \"functions_1\""));
+}
