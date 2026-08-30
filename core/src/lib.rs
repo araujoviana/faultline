@@ -15,6 +15,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 pub mod analysis;
+pub mod iac;
 pub mod profile;
 
 /// A vendor-neutral cloud building block.
@@ -30,17 +31,25 @@ pub enum ResourceKind {
     LoadBalancer,
     ObjectStore,
     Cache,
+    Cdn,
+    Dns,
+    Functions,
+    ApiGateway,
 }
 
 impl ResourceKind {
     /// Every kind, in catalog order.
-    pub const ALL: [ResourceKind; 6] = [
+    pub const ALL: [ResourceKind; 10] = [
         ResourceKind::Compute,
         ResourceKind::Database,
         ResourceKind::Queue,
         ResourceKind::LoadBalancer,
         ResourceKind::ObjectStore,
         ResourceKind::Cache,
+        ResourceKind::Cdn,
+        ResourceKind::Dns,
+        ResourceKind::Functions,
+        ResourceKind::ApiGateway,
     ];
 
     /// Stable lowercase identifier, also used as the id prefix.
@@ -52,7 +61,18 @@ impl ResourceKind {
             ResourceKind::LoadBalancer => "load-balancer",
             ResourceKind::ObjectStore => "object-store",
             ResourceKind::Cache => "cache",
+            ResourceKind::Cdn => "cdn",
+            ResourceKind::Dns => "dns",
+            ResourceKind::Functions => "functions",
+            ResourceKind::ApiGateway => "api-gateway",
         }
+    }
+
+    /// A globally-distributed service with no single-region or single-AZ
+    /// footprint: losing an availability zone or a region never takes it down
+    /// directly (only losing everything it depends on does).
+    pub fn is_global(&self) -> bool {
+        matches!(self, ResourceKind::Cdn | ResourceKind::Dns)
     }
 }
 
@@ -426,6 +446,19 @@ mod tests {
             serde_json::to_string(&ResourceKind::LoadBalancer).unwrap(),
             "\"load-balancer\""
         );
+        assert_eq!(
+            serde_json::to_string(&ResourceKind::ApiGateway).unwrap(),
+            "\"api-gateway\""
+        );
+    }
+
+    #[test]
+    fn only_cdn_and_dns_are_global() {
+        let global: Vec<_> = ResourceKind::ALL
+            .into_iter()
+            .filter(ResourceKind::is_global)
+            .collect();
+        assert_eq!(global, [ResourceKind::Cdn, ResourceKind::Dns]);
     }
 
     #[test]
