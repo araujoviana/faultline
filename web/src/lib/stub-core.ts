@@ -29,6 +29,7 @@ export function makeStubCore(overrides: Partial<StudioCore> = {}): StudioCore {
     configure: () => {},
     simulateFailure: () => EMPTY_REPORT,
     findSpofs: () => "[]",
+    generateIac: () => "# stub",
     profileJson: () => EMPTY_PROFILE,
     stateJson: () => EMPTY_STATE,
     loadJson: () => {},

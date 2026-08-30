@@ -148,6 +148,20 @@ function runSimulation() {
   {:else if kind === "cache"}
     <circle cx="8" cy="9.3" r="5.2" />
     <path d="M8 9.3V6M6.3 1.6h3.4M8 1.6v2M12.4 4.9l1-1" />
+  {:else if kind === "cdn"}
+    <circle cx="8" cy="8" r="6" />
+    <ellipse cx="8" cy="8" rx="2.6" ry="6" />
+    <path d="M2 8h12M3 4.5h10M3 11.5h10" />
+  {:else if kind === "dns"}
+    <rect x="2" y="3.5" width="12" height="9" rx="1.5" />
+    <circle cx="5.4" cy="8" r="1.5" />
+    <path d="M8.6 6.4h3.4M8.6 9.6h3.4" />
+  {:else if kind === "functions"}
+    <path d="M3.5 13.5c2 0 2.6-1 3.4-3l2.2-5.6c.5-1.2 1.1-1.9 2.4-1.9h1" />
+    <path d="M5.5 6.5 10.5 13.5" />
+  {:else if kind === "api-gateway"}
+    <path d="M6.2 2.5C4.4 2.5 4.9 6.7 3 8c1.9 1.3 1.4 5.5 3.2 5.5" />
+    <path d="M9.8 2.5c1.8 0 1.3 4.2 3.2 5.5-1.9 1.3-1.4 5.5-3.2 5.5" />
   {/if}
 {/snippet}
 
@@ -379,7 +393,7 @@ function runSimulation() {
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
-    max-height: 15rem;
+    max-height: 26rem;
     overflow-y: auto;
   }
   .stage-tools {

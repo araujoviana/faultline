@@ -16,6 +16,7 @@ const TOOL_NAMES = [
   "configure-resource",
   "simulate-failure",
   "find-spofs",
+  "generate-iac",
 ];
 
 /** Collect real browser console errors + uncaught exceptions for the whole run. */
@@ -65,7 +66,15 @@ async function installDriver(page: Page) {
     ) => {
       const tool = tools.find((t) => t.name === name);
       if (!tool) throw new Error(`tool not registered: ${name}`);
-      const r = await mc.executeTool(tool, JSON.stringify(input));
+      let r: unknown = await mc.executeTool(tool, JSON.stringify(input));
+      // The dev polyfill sometimes hands back a JSON-encoded result string.
+      if (typeof r === "string") {
+        try {
+          r = JSON.parse(r);
+        } catch {
+          return r;
+        }
+      }
       const content = (r as { content?: Array<{ text?: string }> }).content;
       if (Array.isArray(content)) return content.map((c) => c.text ?? "").join("\n");
       return typeof r === "string" ? r : JSON.stringify(r);
@@ -215,6 +224,13 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
   ).toHaveAttribute("data-status", "degraded");
   await expect(page.locator('svg.canvas g.node-group[data-status="down"]')).toHaveCount(0);
   await expect(page.locator(".banner")).toContainText("1 degraded");
+
+  // generate-iac -> the agent gets reviewable Terraform straight from the diagram.
+  const hcl = await demo(page, "generate-iac", { target: "terraform" });
+  expect(hcl).toContain("```hcl");
+  expect(hcl).toContain('resource "aws_db_instance" "database_1"');
+  expect(hcl).toContain("multi_az");
+  expect(hcl).toContain("target_group_arns");
 
   expect(errors).toEqual([]);
 });

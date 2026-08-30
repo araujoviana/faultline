@@ -26,6 +26,10 @@
   --k-load-balancer: #12908f;
   --k-object-store: #3d7fd0;
   --k-cache: #cf4372;
+  --k-cdn: #2f8f5b;
+  --k-dns: #8a6d1e;
+  --k-functions: #c2571e;
+  --k-api-gateway: #6d5bd0;
 
   color-scheme: light dark;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -57,6 +61,10 @@
     --k-load-balancer: #37b3b2;
     --k-object-store: #5f9ae4;
     --k-cache: #e2699a;
+    --k-cdn: #56c98a;
+    --k-dns: #d9b25e;
+    --k-functions: #e88a52;
+    --k-api-gateway: #9d8bec;
   }
 }
 
