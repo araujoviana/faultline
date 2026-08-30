@@ -97,4 +97,22 @@ mod tests {
         assert_eq!(multi.failover_seconds, Some(90));
         assert!(p.variant(ResourceKind::Database, "nope").is_none());
     }
+
+    #[test]
+    fn profile_covers_every_resource_kind() {
+        let p = ProviderProfile::aws();
+        for kind in ResourceKind::ALL {
+            let variants = p
+                .variants
+                .get(kind.slug())
+                .unwrap_or_else(|| panic!("no variants for {kind}"));
+            assert!(!variants.is_empty(), "empty variant list for {kind}");
+        }
+        assert!(p.variant(ResourceKind::Queue, "sqs").is_some());
+        assert!(p.variant(ResourceKind::Cdn, "cloudfront").is_some());
+        assert!(p.variant(ResourceKind::Dns, "route53").is_some());
+        assert!(p.variant(ResourceKind::Functions, "lambda").is_some());
+        assert!(p.variant(ResourceKind::ApiGateway, "apigw-http").is_some());
+        assert!(p.variant(ResourceKind::Database, "dynamodb").is_some());
+    }
 }

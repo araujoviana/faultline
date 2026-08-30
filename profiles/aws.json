@@ -10,12 +10,20 @@
     "database": [
       { "id": "rds-single-az", "display_name": "RDS (Single-AZ)", "spof": true },
       { "id": "rds-multi-az", "display_name": "RDS (Multi-AZ)", "failover_seconds": 90 },
-      { "id": "aurora", "display_name": "Aurora", "failover_seconds": 30 }
+      { "id": "aurora", "display_name": "Aurora", "failover_seconds": 30 },
+      { "id": "dynamodb", "display_name": "DynamoDB" }
     ],
     "load-balancer": [{ "id": "alb", "display_name": "Application Load Balancer" }],
     "object-store": [{ "id": "s3", "display_name": "Amazon S3" }],
     "cache": [
       { "id": "elasticache", "display_name": "ElastiCache (Multi-AZ)", "failover_seconds": 60 }
-    ]
+    ],
+    "queue": [{ "id": "sqs", "display_name": "Amazon SQS" }],
+    "cdn": [{ "id": "cloudfront", "display_name": "Amazon CloudFront" }],
+    "dns": [
+      { "id": "route53", "display_name": "Route 53 (health-checked)", "failover_seconds": 60 }
+    ],
+    "functions": [{ "id": "lambda", "display_name": "AWS Lambda" }],
+    "api-gateway": [{ "id": "apigw-http", "display_name": "API Gateway (HTTP)" }]
   }
 }
