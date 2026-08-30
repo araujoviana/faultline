@@ -8,6 +8,12 @@ let { studio }: { studio: StudioStore } = $props();
 const NODE_W = 124;
 const NODE_H = 54;
 
+// SVG viewBox extent — the "world" size before pan/zoom is applied.
+const VIEW_W = 700;
+const VIEW_H = 620;
+const MIN_K = 0.35;
+const MAX_K = 3;
+
 function nodeById(id: string) {
   return studio.state.resources.find((r) => r.id === id);
 }
@@ -33,16 +39,83 @@ const spofIds = $derived(new Set(studio.spofs.map((s) => s.id)));
 
 // ---- pointer drag: move a node, one undo step on release ----
 let svgEl: SVGSVGElement | undefined = $state();
+let worldEl: SVGGElement | undefined = $state();
 let drag = $state<{ id: string; offX: number; offY: number } | null>(null);
 let ghost = $state<{ id: string; x: number; y: number } | null>(null);
 
+// Node positions live in the world group's local space, so map straight
+// through its CTM — that folds in both the viewBox scale and the pan/zoom
+// transform below.
 function toSvgPoint(e: PointerEvent): { x: number; y: number } | null {
-  if (!svgEl) return null;
-  const ctm = svgEl.getScreenCTM();
+  const ctm = worldEl?.getScreenCTM();
   if (!ctm) return null;
   const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
   return { x: p.x, y: p.y };
 }
+
+// ---- pan & zoom: a translate/scale on the world group ----
+const clampK = (k: number) => Math.min(MAX_K, Math.max(MIN_K, k));
+let view = $state({ x: 0, y: 0, k: 1 });
+let pan = $state<{ cx: number; cy: number; ox: number; oy: number } | null>(null);
+
+// client px -> SVG viewport (viewBox) coords, honouring preserveAspectRatio.
+function toViewport(clientX: number, clientY: number): { x: number; y: number } | null {
+  const ctm = svgEl?.getScreenCTM();
+  if (!ctm) return null;
+  const p = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
+}
+
+function zoomAt(clientX: number, clientY: number, factor: number) {
+  const v = toViewport(clientX, clientY);
+  if (!v) return;
+  const k = clampK(view.k * factor);
+  const ratio = k / view.k;
+  // keep the world point under the cursor fixed on screen
+  view = { k, x: v.x - (v.x - view.x) * ratio, y: v.y - (v.y - view.y) * ratio };
+}
+
+function onWheel(e: WheelEvent) {
+  e.preventDefault();
+  zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0016));
+}
+
+function zoomStep(dir: 1 | -1) {
+  const r = svgEl?.getBoundingClientRect();
+  if (!r) return;
+  zoomAt(r.left + r.width / 2, r.top + r.height / 2, dir > 0 ? 1.25 : 0.8);
+}
+
+function resetView() {
+  view = { x: 0, y: 0, k: 1 };
+}
+
+function startPan(e: PointerEvent) {
+  if (e.button !== 0 || drag) return;
+  pan = { cx: e.clientX, cy: e.clientY, ox: view.x, oy: view.y };
+  svgEl?.setPointerCapture(e.pointerId);
+}
+
+function movePan(e: PointerEvent) {
+  if (!pan) return;
+  const a = toViewport(pan.cx, pan.cy);
+  const b = toViewport(e.clientX, e.clientY);
+  if (!a || !b) return;
+  view = { ...view, x: pan.ox + (b.x - a.x), y: pan.oy + (b.y - a.y) };
+}
+
+function endPan(e: PointerEvent) {
+  pan = null;
+  if (svgEl?.hasPointerCapture(e.pointerId)) svgEl.releasePointerCapture(e.pointerId);
+}
+
+// Attach wheel non-passively so preventDefault() actually blocks page scroll.
+$effect(() => {
+  const el = svgEl;
+  if (!el) return;
+  el.addEventListener("wheel", onWheel, { passive: false });
+  return () => el.removeEventListener("wheel", onWheel);
+});
 
 function nodePos(node: ResourceNode): { x: number; y: number } {
   return ghost && ghost.id === node.id ? ghost : { x: node.x, y: node.y };
@@ -52,6 +125,7 @@ function startDrag(e: PointerEvent, node: ResourceNode) {
   const p = toSvgPoint(e);
   if (!p) return;
   e.preventDefault();
+  e.stopPropagation(); // don't let the canvas start a pan
   drag = { id: node.id, offX: p.x - node.x, offY: p.y - node.y };
   ghost = { id: node.id, x: node.x, y: node.y };
   (e.currentTarget as Element).setPointerCapture(e.pointerId);
@@ -200,13 +274,19 @@ function runSimulation() {
       </div>
     {/if}
 
+    <div class="canvas-wrap">
     <svg
       bind:this={svgEl}
       class="canvas"
-      viewBox="0 0 700 620"
+      class:panning={!!pan}
+      viewBox="0 0 {VIEW_W} {VIEW_H}"
       preserveAspectRatio="xMidYMid meet"
       role="img"
-      aria-label="Architecture canvas"
+      aria-label="Architecture canvas — scroll to zoom, drag to pan"
+      onpointerdown={startPan}
+      onpointermove={movePan}
+      onpointerup={endPan}
+      onpointercancel={endPan}
     >
       <defs>
         <marker
@@ -220,8 +300,28 @@ function runSimulation() {
         >
           <path d="M0 0 L10 5 L0 10 z" class="edge-head" />
         </marker>
+        <pattern
+          id="canvas-grid"
+          width="24"
+          height="24"
+          patternUnits="userSpaceOnUse"
+          patternTransform="translate({view.x} {view.y}) scale({view.k})"
+        >
+          <circle cx="1" cy="1" r="1" class="grid-dot" />
+        </pattern>
       </defs>
 
+      <rect
+        class="grid-bg"
+        x="0"
+        y="0"
+        width={VIEW_W}
+        height={VIEW_H}
+        fill="url(#canvas-grid)"
+        pointer-events="none"
+      />
+
+      <g bind:this={worldEl} transform="translate({view.x} {view.y}) scale({view.k})">
       {#each studio.state.edges as edge (edge.from + "->" + edge.to)}
         {@const a = nodeById(edge.from)}
         {@const b = nodeById(edge.to)}
@@ -287,7 +387,15 @@ function runSimulation() {
           </text>
         </g>
       {/if}
+      </g>
     </svg>
+
+      <div class="view-tools">
+        <button aria-label="Zoom out" onclick={() => zoomStep(-1)}>−</button>
+        <button aria-label="Reset view" onclick={resetView}>{Math.round(view.k * 100)}%</button>
+        <button aria-label="Zoom in" onclick={() => zoomStep(1)}>+</button>
+      </div>
+    </div>
 
     <div class="legend">
       <span class="swatch down"></span> down
@@ -413,13 +521,39 @@ function runSimulation() {
   .banner button {
     margin-left: auto;
   }
+  .canvas-wrap {
+    position: relative;
+  }
   .canvas {
+    display: block;
     width: 100%;
     height: clamp(20rem, 62vh, 44rem);
     border: 1px solid var(--line);
     border-radius: 12px;
-    background:
-      radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0 / 24px 24px;
+    background: var(--bg);
+    cursor: grab;
+    touch-action: none;
+    overflow: hidden;
+  }
+  .canvas.panning {
+    cursor: grabbing;
+  }
+  .grid-dot {
+    fill: var(--line);
+  }
+
+  .view-tools {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 0.6rem;
+    display: flex;
+    gap: 0.25rem;
+  }
+  .view-tools button {
+    padding: 0.2rem 0.5rem;
+    min-width: 2rem;
+    background: var(--bg);
+    line-height: 1.2;
   }
 
   /* ---- dependency edges: Manhattan, arrow points from -> to ---- */
