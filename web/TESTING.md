@@ -98,6 +98,11 @@ Regions: `us-east-1`, `eu-west-1`, each with `…a` / `…b` / `…c` AZs.
 Run in order. "Agent call" = the tool + input the agent issues. Check both the **tool text**
 (agent-visible) and the **canvas** (human-visible). This mirrors `e2e/demo.spec.ts`.
 
+> **Fast path:** paste `e2e/manual-console-check.js` into the DevTools console (with the app open
+> in a WebMCP browser). It runs this whole script through the real `document.modelContext`, checks
+> every tool's text output, and prints a pass/fail table + p50/p95 latency for the write-up. You
+> still watch the canvas yourself at the 👁 markers. Reload the page before re-running.
+
 ### Step 1 — build `alb → ec2-asg → rds-single-az`, DB in `us-east-1a`, wired together
 
 | Agent call | Expected tool text | Expected canvas |
