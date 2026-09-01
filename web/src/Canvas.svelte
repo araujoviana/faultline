@@ -40,8 +40,44 @@ const spofIds = $derived(new Set(studio.spofs.map((s) => s.id)));
 // ---- pointer drag: move a node, one undo step on release ----
 let svgEl: SVGSVGElement | undefined = $state();
 let worldEl: SVGGElement | undefined = $state();
-let drag = $state<{ id: string; offX: number; offY: number } | null>(null);
+let drag = $state<{
+  id: string;
+  offX: number;
+  offY: number;
+  startX: number;
+  startY: number;
+} | null>(null);
 let ghost = $state<{ id: string; x: number; y: number } | null>(null);
+// A press that never moves past a few px is a click — select, don't move.
+let pressMoved = false;
+
+// ---- selection: click a node to open its inspector (human parity with the
+// configure-resource / connect / lint tools the agent has) ----
+let selectedId = $state<string | null>(null);
+const selectedNode = $derived(
+  selectedId ? (studio.state.resources.find((r) => r.id === selectedId) ?? null) : null,
+);
+
+// ---- link: drag from a node's port to another node to add a dependency edge ----
+let linking = $state<{ from: string; x: number; y: number } | null>(null);
+
+// ---- generated IaC, shown in a modal ----
+let iacEl: HTMLDialogElement | undefined = $state();
+let iacText = $state("");
+
+function selectRegion(id: string, region: string) {
+  // Changing region clears the zone (a zone belongs to one region).
+  studio.configure(id, "", region, "");
+}
+
+function openIac() {
+  try {
+    iacText = studio.generateIac("terraform");
+  } catch (error) {
+    iacText = error instanceof Error ? error.message : String(error);
+  }
+  iacEl?.showModal();
+}
 
 // Node positions live in the world group's local space, so map straight
 // through its CTM — that folds in both the viewBox scale and the pan/zoom
@@ -92,6 +128,7 @@ function resetView() {
 
 function startPan(e: PointerEvent) {
   if (e.button !== 0 || drag) return;
+  selectedId = null; // pressing empty canvas dismisses the inspector
   pan = { cx: e.clientX, cy: e.clientY, ox: view.x, oy: view.y };
   svgEl?.setPointerCapture(e.pointerId);
 }
@@ -126,7 +163,8 @@ function startDrag(e: PointerEvent, node: ResourceNode) {
   if (!p) return;
   e.preventDefault();
   e.stopPropagation(); // don't let the canvas start a pan
-  drag = { id: node.id, offX: p.x - node.x, offY: p.y - node.y };
+  pressMoved = false;
+  drag = { id: node.id, offX: p.x - node.x, offY: p.y - node.y, startX: p.x, startY: p.y };
   ghost = { id: node.id, x: node.x, y: node.y };
   (e.currentTarget as Element).setPointerCapture(e.pointerId);
 }
@@ -135,13 +173,48 @@ function moveDrag(e: PointerEvent) {
   if (!drag) return;
   const p = toSvgPoint(e);
   if (!p) return;
+  if (Math.hypot(p.x - drag.startX, p.y - drag.startY) > 3) pressMoved = true;
   ghost = { id: drag.id, x: p.x - drag.offX, y: p.y - drag.offY };
 }
 
 function endDrag() {
-  if (drag && ghost) studio.move(ghost.id, Math.round(ghost.x), Math.round(ghost.y));
+  if (drag && ghost && pressMoved) {
+    studio.move(ghost.id, Math.round(ghost.x), Math.round(ghost.y));
+  } else if (drag && !pressMoved) {
+    selectedId = selectedId === drag.id ? null : drag.id;
+  }
   drag = null;
   ghost = null;
+}
+
+function startLink(e: PointerEvent, node: ResourceNode) {
+  const p = toSvgPoint(e);
+  if (!p) return;
+  e.preventDefault();
+  e.stopPropagation();
+  linking = { from: node.id, x: p.x, y: p.y };
+  (e.currentTarget as Element).setPointerCapture(e.pointerId);
+}
+
+function moveLink(e: PointerEvent) {
+  if (!linking) return;
+  const p = toSvgPoint(e);
+  if (p) linking = { ...linking, x: p.x, y: p.y };
+}
+
+function endLink(e: PointerEvent) {
+  if (!linking) return;
+  const from = linking.from;
+  linking = null;
+  const g = document.elementFromPoint(e.clientX, e.clientY)?.closest?.("g.node-group");
+  const to = (g as SVGGElement | null)?.dataset.id;
+  if (to && to !== from) {
+    try {
+      studio.connect(from, to);
+    } catch {
+      // already connected / invalid — the studio throws; nothing to do here.
+    }
+  }
 }
 
 /**
@@ -257,7 +330,75 @@ function runSimulation() {
       </select>
       <button onclick={runSimulation}>Fail this AZ</button>
     {/if}
+
+    <h2>Analyze</h2>
     <button onclick={() => studio.findSpofs()}>Scan for SPOFs</button>
+    <button onclick={() => studio.lint()}>Resilience lint</button>
+    <button onclick={openIac}>Generate Terraform</button>
+
+    {#if selectedNode}
+      {@const node = selectedNode}
+      {@const variants = studio.profile.variants[node.kind] ?? []}
+      {@const azs = studio.profile.regions.find((r) => r.id === node.placement?.region)?.azs ?? []}
+      <hr />
+      <div class="inspector">
+        <h2>{node.label} <span class="dim">· {node.id}</span></h2>
+
+        {#if variants.length}
+          <label>
+            Variant
+            <select
+              value={node.variant ?? ""}
+              onchange={(e) => studio.configure(node.id, e.currentTarget.value)}
+            >
+              <option value="">— none —</option>
+              {#each variants as v (v.id)}
+                <option value={v.id}>{v.display_name}</option>
+              {/each}
+            </select>
+          </label>
+        {/if}
+
+        <label>
+          Region
+          <select
+            value={node.placement?.region ?? ""}
+            onchange={(e) => selectRegion(node.id, e.currentTarget.value)}
+          >
+            <option value="">— unplaced —</option>
+            {#each studio.profile.regions as r (r.id)}
+              <option value={r.id}>{r.id}</option>
+            {/each}
+          </select>
+        </label>
+
+        {#if node.placement?.region}
+          <label>
+            Zone
+            <select
+              value={node.placement?.az ?? ""}
+              onchange={(e) =>
+                studio.configure(node.id, "", node.placement?.region ?? "", e.currentTarget.value)}
+            >
+              <option value="">— regional (multi-AZ) —</option>
+              {#each azs as az (az)}
+                <option value={az}>{az}</option>
+              {/each}
+            </select>
+          </label>
+        {/if}
+
+        <button
+          class="ghost danger"
+          onclick={() => {
+            studio.removeResource(node.id);
+            selectedId = null;
+          }}
+        >
+          Delete node
+        </button>
+      </div>
+    {/if}
   </aside>
 
   <div class="stage">
@@ -271,6 +412,25 @@ function runSimulation() {
       <div class="banner" role="status">
         <strong>{r.target}</strong> — {r.down.length} down, {r.degraded.length} degraded
         <button class="ghost" onclick={() => studio.clearAnalysis()}>Clear</button>
+      </div>
+    {/if}
+
+    {#if studio.findings.length}
+      <div class="findings" role="status">
+        <div class="findings-head">
+          <strong>{studio.findings.length} resilience finding{studio.findings.length > 1 ? "s" : ""}</strong>
+          <button class="ghost" onclick={() => studio.clearAnalysis()}>Clear</button>
+        </div>
+        <ul>
+          {#each studio.findings as f (f.rule + (f.resource ?? ""))}
+            <li data-sev={f.severity}>
+              <span class="sev">{f.severity}</span>
+              <span class="f-title">{f.title}{f.resource ? ` — ${f.resource}` : ""}</span>
+              <p class="f-detail">{f.detail}</p>
+              <p class="f-cite">{f.citation.source} · {f.citation.chapter} §{f.citation.section}</p>
+            </li>
+          {/each}
+        </ul>
       </div>
     {/if}
 
@@ -341,11 +501,13 @@ function runSimulation() {
           transform="translate({pos.x} {pos.y})"
           class="node-group"
           class:dragging={drag?.id === node.id}
+          class:selected={selectedId === node.id}
           data-status={status(node.id)}
+          data-id={node.id}
           style="--kc: var(--k-{node.kind})"
           role="button"
           tabindex="-1"
-          aria-label="{node.label} — drag to reposition"
+          aria-label="{node.label} — click to configure, drag to reposition"
           onpointerdown={(e) => startDrag(e, node)}
           onpointermove={moveDrag}
           onpointerup={endDrag}
@@ -374,8 +536,33 @@ function runSimulation() {
           <text class="label" x="38" y="22">{node.label}</text>
           <text class="variant" x="38" y="34">{variantName(node) || node.kind}</text>
           <text class="badge" x="10" y={NODE_H - 8}>{placementBadge(node)}</text>
+
+          <!-- drag this port onto another node to add a dependency edge -->
+          <circle
+            class="port"
+            cx={NODE_W}
+            cy={NODE_H / 2}
+            r="5"
+            role="button"
+            tabindex="-1"
+            aria-label="Draw a dependency from {node.label}"
+            onpointerdown={(e) => startLink(e, node)}
+            onpointermove={moveLink}
+            onpointerup={endLink}
+            onpointercancel={() => (linking = null)}
+          />
         </g>
       {/each}
+
+      {#if linking}
+        {@const src = nodeById(linking.from)}
+        {#if src}
+          <path
+            class="link-preview"
+            d="M{src.x + NODE_W} {src.y + NODE_H / 2} L{linking.x} {linking.y}"
+          />
+        {/if}
+      {/if}
 
       {#if studio.state.resources.length === 0}
         <g class="empty" text-anchor="middle">
@@ -408,6 +595,17 @@ function runSimulation() {
     <ActivityLog />
   </div>
 </div>
+
+<dialog bind:this={iacEl} class="iac">
+  <div class="iac-head">
+    <strong>Terraform (HCL)</strong>
+    <span class="iac-actions">
+      <button class="ghost" onclick={() => navigator.clipboard?.writeText(iacText)}>Copy</button>
+      <button class="ghost" onclick={() => iacEl?.close()}>Close</button>
+    </span>
+  </div>
+  <pre>{iacText}</pre>
+</dialog>
 
 <style>
   .layout {
@@ -695,5 +893,154 @@ function runSimulation() {
   .swatch.spof {
     background: var(--spof);
     opacity: 0.35;
+  }
+
+  /* ---- human-parity controls: connect port, node inspector, findings, IaC ----
+     Added alongside the agent's connect / configure-resource / resilience-lint /
+     generate-iac tools so a person can do everything the agent can. */
+  .port {
+    fill: var(--node-fill);
+    stroke: var(--kc);
+    stroke-width: 1.25;
+    opacity: 0;
+    cursor: crosshair;
+    transition: opacity 0.12s ease;
+  }
+  .node-group:hover .port,
+  .node-group.selected .port {
+    opacity: 1;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .port {
+      transition: none;
+    }
+  }
+
+  .node-group.selected .node {
+    stroke: var(--kc);
+    stroke-width: 1.75;
+  }
+
+  .link-preview {
+    fill: none;
+    stroke: var(--kc);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+    pointer-events: none;
+  }
+
+  .inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .inspector .dim {
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .inspector label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+  }
+  .inspector select {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 0.85rem;
+    color: var(--fg);
+  }
+  button.danger {
+    color: var(--status-down);
+  }
+
+  .findings {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+  .findings-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .findings-head button {
+    margin-left: auto;
+  }
+  .findings ul {
+    list-style: none;
+    margin: 0.4rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .findings li {
+    border-left: 2px solid var(--line);
+    padding-left: 0.6rem;
+  }
+  .findings li[data-sev="high"] {
+    border-left-color: var(--status-down);
+  }
+  .findings li[data-sev="medium"] {
+    border-left-color: var(--status-degraded);
+  }
+  .findings .sev {
+    display: inline-block;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--muted);
+    margin-right: 0.4rem;
+  }
+  .findings .f-title {
+    font-weight: 600;
+  }
+  .findings .f-detail {
+    margin: 0.15rem 0 0;
+    color: var(--fg);
+  }
+  .findings .f-cite {
+    margin: 0.15rem 0 0;
+    color: var(--muted);
+    font-size: 0.75rem;
+  }
+
+  dialog.iac {
+    width: min(80ch, 92vw);
+    max-height: 80vh;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--bg);
+    color: var(--fg);
+    padding: 0;
+  }
+  dialog.iac::backdrop {
+    background: rgb(0 0 0 / 0.45);
+  }
+  .iac-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .iac-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+  dialog.iac pre {
+    margin: 0;
+    padding: 1rem;
+    overflow: auto;
+    max-height: calc(80vh - 3.5rem);
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.8rem;
+    line-height: 1.5;
   }
 </style>

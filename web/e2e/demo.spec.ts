@@ -152,6 +152,57 @@ test("a node can be dragged to a new position", async ({ page }) => {
   await expect(node).toHaveAttribute("transform", "translate(40 40)");
 });
 
+test("human parity: build, configure, connect, lint and generate IaC from the UI only", async ({
+  page,
+}) => {
+  await page.goto("/");
+
+  // 1. Add three resources from the palette (no agent).
+  const palette = page.locator("aside.palette");
+  for (const kind of ["load-balancer", "compute", "database"]) {
+    await palette.getByRole("button", { name: `+ ${kind}`, exact: true }).click();
+  }
+  await expect(page.locator("svg.canvas g.node-group")).toHaveCount(3);
+
+  // 2. Click a node to open its inspector, then configure it.
+  const db = page.locator('g.node-group[data-id="database-1"]');
+  await db.click();
+  const inspector = palette.locator(".inspector");
+  await expect(inspector).toContainText("database-1");
+  await inspector.locator("select").nth(0).selectOption("rds-single-az"); // Variant
+  await inspector.locator("select").nth(1).selectOption("us-east-1"); // Region
+  await inspector.locator("select").nth(2).selectOption("us-east-1a"); // Zone (appears after region)
+  await expect(db.locator("text.variant")).toHaveText("RDS (Single-AZ)");
+  await expect(db.locator("text.badge")).toHaveText("us-east-1a");
+
+  // 3. Connect nodes by dragging each node's port onto the next.
+  async function link(fromId: string, toId: string) {
+    await page.locator(`g.node-group[data-id="${fromId}"]`).click(); // select -> port visible
+    const port = await page.locator(`g.node-group[data-id="${fromId}"] .port`).boundingBox();
+    const target = await page.locator(`g.node-group[data-id="${toId}"]`).boundingBox();
+    if (!port || !target) throw new Error("missing geometry");
+    await page.mouse.move(port.x + port.width / 2, port.y + port.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 8 });
+    await page.mouse.up();
+  }
+  await link("load-balancer-1", "compute-1");
+  await link("compute-1", "database-1");
+  await expect(page.locator("svg.canvas path.edge")).toHaveCount(2);
+
+  // 4. Resilience lint from the UI — flags the single-AZ database, citing DDIA.
+  await palette.getByRole("button", { name: "Resilience lint" }).click();
+  const findings = page.locator(".findings");
+  await expect(findings).toBeVisible();
+  await expect(findings).toContainText("Replication");
+
+  // 5. Generate Terraform from the UI — opens the dialog with the HCL.
+  await palette.getByRole("button", { name: "Generate Terraform" }).click();
+  const dialog = page.locator("dialog.iac");
+  await expect(dialog).toBeVisible();
+  await expect(dialog.locator("pre")).toContainText('resource "aws_db_instance" "database_1"');
+});
+
 test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => {
   const errors = trackErrors(page);
 
