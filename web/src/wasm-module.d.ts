@@ -14,6 +14,7 @@ declare module "*/wasm/strata_wasm.js" {
     configure(id: string, variant: string, region: string, az: string): void;
     simulateFailure(region: string, az: string): string;
     findSpofs(): string;
+    lint(): string;
     generateIac(target: string): string;
     profileJson(): string;
     stateJson(): string;

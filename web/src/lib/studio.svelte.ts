@@ -1,4 +1,11 @@
-import type { ArchitectureState, BlastReport, ProviderProfile, Spof, StudioCore } from "./core";
+import type {
+  ArchitectureState,
+  BlastReport,
+  Finding,
+  ProviderProfile,
+  Spof,
+  StudioCore,
+} from "./core";
 
 /**
  * Reactive wrapper around a {@link StudioCore}. Holds a `$state` snapshot of the
@@ -12,6 +19,7 @@ export interface StudioStore {
   readonly profile: ProviderProfile;
   readonly lastReport: BlastReport | null;
   readonly spofs: Spof[];
+  readonly findings: Finding[];
   addResource(kind: string, label: string, x?: number, y?: number): string;
   connect(from: string, to: string): void;
   /** Move a resource to a new canvas position (one undo step). */
@@ -20,6 +28,8 @@ export interface StudioStore {
   configure(id: string, variant?: string, region?: string, az?: string): void;
   simulateFailure(region: string, az: string): BlastReport;
   findSpofs(): Spof[];
+  /** Rule-based resilience findings, each citing a DDIA principle. Read-only view, not an undo step. */
+  lint(): Finding[];
   /** Emit the architecture as infrastructure-as-code. Read-only: no mutation, no undo step. */
   generateIac(target?: string): string;
   clearAnalysis(): void;
@@ -68,6 +78,7 @@ export function createStudio(core: StudioCore): StudioStore {
   const history: string[] = $state([]);
   let lastReport = $state<BlastReport | null>(null);
   let spofs = $state<Spof[]>([]);
+  let findings = $state<Finding[]>([]);
 
   let profile: ProviderProfile = EMPTY_PROFILE;
   try {
@@ -104,6 +115,9 @@ export function createStudio(core: StudioCore): StudioStore {
     },
     get spofs() {
       return spofs;
+    },
+    get findings() {
+      return findings;
     },
     addResource(kind, label, x, y) {
       checkpoint();
@@ -142,18 +156,25 @@ export function createStudio(core: StudioCore): StudioStore {
       spofs = found;
       return found;
     },
+    lint() {
+      const found = JSON.parse(core.lint()) as Finding[];
+      findings = found;
+      return found;
+    },
     generateIac(target = "terraform") {
       return core.generateIac(target);
     },
     clearAnalysis() {
       lastReport = null;
       spofs = [];
+      findings = [];
     },
     reset() {
       checkpoint();
       core.loadJson(EMPTY);
       lastReport = null;
       spofs = [];
+      findings = [];
       refresh();
     },
     undo() {
@@ -162,6 +183,7 @@ export function createStudio(core: StudioCore): StudioStore {
       core.loadJson(previous);
       lastReport = null;
       spofs = [];
+      findings = [];
       refresh();
     },
   };

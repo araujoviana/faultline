@@ -16,6 +16,7 @@ const TOOL_NAMES = [
   "configure-resource",
   "simulate-failure",
   "find-spofs",
+  "resilience-lint",
   "generate-iac",
 ];
 
@@ -211,12 +212,21 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
     page.locator('svg.canvas g.node-group:has(rect[data-kind="database"]) .spof-ring'),
   ).toHaveCount(1);
 
+  // resilience-lint -> flags the single-AZ datastore, citing DDIA.
+  const lint1 = await demo(page, "resilience-lint", {});
+  expect(lint1).toContain("single-az-datastore");
+  expect(lint1).toMatch(/DDIA|Replication/);
+
   // Harden -> Multi-AZ, then re-simulate: DB degrades (~90s), compute + LB healthy.
   await demo(page, "configure-resource", {
     id: "database-1",
     variant: "rds-multi-az",
     region: "us-east-1",
   });
+
+  // The high-severity finding clears once the datastore is Multi-AZ.
+  const lint2 = await demo(page, "resilience-lint", {});
+  expect(lint2).not.toContain("single-az-datastore");
   const failover = await demo(page, "simulate-failure", { region: "us-east-1", az: "us-east-1a" });
   expect(failover).toContain("~90s");
   await expect(
