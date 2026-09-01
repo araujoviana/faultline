@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 
 pub mod analysis;
 pub mod iac;
+pub mod lint;
 pub mod profile;
 
 /// A vendor-neutral cloud building block.

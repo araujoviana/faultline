@@ -62,6 +62,26 @@ export interface Spof {
   orphans: string[];
 }
 
+/** How much a {@link Finding} should worry you (mirrors `lint::Severity`). */
+export type Severity = "high" | "medium" | "low";
+
+/** A citation into *Designing Data-Intensive Applications* (mirrors `lint::Citation`). */
+export interface Citation {
+  source: string;
+  chapter: string;
+  section: string;
+}
+
+/** One resilience anti-pattern found by the lint rules (mirrors `lint::Finding`). */
+export interface Finding {
+  rule: string;
+  severity: Severity;
+  resource: string | null;
+  title: string;
+  detail: string;
+  citation: Citation;
+}
+
 export interface ProfileVariant {
   id: string;
   display_name: string;
@@ -89,6 +109,8 @@ export interface StudioCore {
   simulateFailure(region: string, az: string): string;
   /** Current single points of failure; returns a JSON {@link Spof}`[]`. */
   findSpofs(): string;
+  /** Rule-based resilience findings; returns a JSON {@link Finding}`[]`. Read-only. */
+  lint(): string;
   /** Emit the architecture as infrastructure-as-code (read-only). Throws on an unknown target. */
   generateIac(target: string): string;
   /** The active provider profile as JSON. */
@@ -164,6 +186,9 @@ export function createMemoryCore(): StudioCore {
       return EMPTY_REPORT;
     },
     findSpofs() {
+      return "[]";
+    },
+    lint() {
       return "[]";
     },
     generateIac(target) {

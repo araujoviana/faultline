@@ -6,6 +6,7 @@ import { connectTool } from "./connect";
 import { findSpofsTool } from "./find-spofs";
 import { generateIacTool } from "./generate-iac";
 import { moveResourceTool } from "./move-resource";
+import { resilienceLintTool } from "./resilience-lint";
 import { simulateFailureTool } from "./simulate-failure";
 
 /**
@@ -20,6 +21,7 @@ export function buildToolRegistry(studio: StudioStore): WebMcpTool[] {
     configureResourceTool(studio),
     simulateFailureTool(studio),
     findSpofsTool(studio),
+    resilienceLintTool(studio),
     generateIacTool(studio),
   ];
 }
