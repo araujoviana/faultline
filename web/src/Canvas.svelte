@@ -456,10 +456,14 @@ function runRegionSimulation() {
       </div>
     {/if}
 
-    {#if studio.findings.length}
+    {#if studio.score}
+      {@const sc = studio.score}
       <div class="findings" role="status">
         <div class="findings-head">
-          <strong>{studio.findings.length} resilience finding{studio.findings.length > 1 ? "s" : ""}</strong>
+          <strong>
+            <span class="score-badge" data-grade={sc.grade}>{sc.value}/100 · {sc.grade}</span>
+            {studio.findings.length} resilience finding{studio.findings.length === 1 ? "" : "s"}
+          </strong>
           <button class="ghost" onclick={() => studio.clearAnalysis()}>Clear</button>
         </div>
         <ul>
@@ -1134,6 +1138,24 @@ function runRegionSimulation() {
   }
   .findings .f-title {
     font-weight: 600;
+  }
+  .score-badge {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    padding: 0.05rem 0.4rem;
+    border-radius: var(--radius-sm);
+    margin-right: 0.5rem;
+    background: var(--accent-wash);
+    color: var(--accent-strong);
+  }
+  .score-badge[data-grade="D"],
+  .score-badge[data-grade="F"] {
+    background: var(--status-down-bg);
+    color: var(--status-down);
+  }
+  .score-badge[data-grade="C"] {
+    background: var(--status-degraded-bg);
+    color: var(--status-degraded);
   }
   .findings .f-detail {
     margin: 0.15rem 0 0;

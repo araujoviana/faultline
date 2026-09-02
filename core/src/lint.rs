@@ -59,6 +59,64 @@ pub struct Finding {
     pub citation: Citation,
 }
 
+/// A single deduction from the [`ResilienceScore`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Deduction {
+    pub rule: String,
+    pub severity: Severity,
+    pub points: u32,
+}
+
+/// A 0–100 resilience score derived from the lint findings — the "harden" beat's
+/// portable artifact. 100 is a design with no known anti-patterns.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ResilienceScore {
+    pub value: u32,
+    /// Letter grade: `A` (90+), `B` (75+), `C` (60+), `D` (40+), else `F`.
+    pub grade: char,
+    /// What was subtracted from 100, worst-first.
+    pub deductions: Vec<Deduction>,
+}
+
+fn severity_weight(severity: Severity) -> u32 {
+    match severity {
+        Severity::High => 25,
+        Severity::Medium => 10,
+        Severity::Low => 4,
+    }
+}
+
+fn grade_for(value: u32) -> char {
+    match value {
+        90..=100 => 'A',
+        75..=89 => 'B',
+        60..=74 => 'C',
+        40..=59 => 'D',
+        _ => 'F',
+    }
+}
+
+/// Score the current design out of 100 from its lint findings.
+pub fn score(arch: &Architecture, profile: &ProviderProfile) -> ResilienceScore {
+    let findings = lint(arch, profile);
+    let deductions: Vec<Deduction> = findings
+        .iter()
+        .map(|f| Deduction {
+            rule: f.rule.clone(),
+            severity: f.severity,
+            points: severity_weight(f.severity),
+        })
+        .collect();
+
+    let total: u32 = deductions.iter().map(|d| d.points).sum();
+    let value = 100u32.saturating_sub(total);
+    ResilienceScore {
+        value,
+        grade: grade_for(value),
+        deductions,
+    }
+}
+
 /// Run every rule over `arch` and return the findings, worst-first and
 /// deterministically ordered (severity, then rule id, then resource id).
 pub fn lint(arch: &Architecture, profile: &ProviderProfile) -> Vec<Finding> {
@@ -533,6 +591,40 @@ mod tests {
             lint(&Architecture::new(), &ProviderProfile::aws()),
             Vec::new()
         );
+    }
+
+    #[test]
+    fn score_is_100_a_for_a_clean_design_and_drops_with_findings() {
+        let p = ProviderProfile::aws();
+        let clean = score(&Architecture::new(), &p);
+        assert_eq!(clean.value, 100);
+        assert_eq!(clean.grade, 'A');
+        assert!(clean.deductions.is_empty());
+
+        // The single-AZ demo trips a high (-25) and a low (-4) → 71, grade C.
+        let s = score(&single_az_demo(), &p);
+        assert_eq!(s.value, 71);
+        assert_eq!(s.grade, 'C');
+        assert_eq!(s.deductions[0].rule, "single-az-datastore");
+        assert_eq!(s.deductions[0].points, 25);
+    }
+
+    #[test]
+    fn score_clamps_at_zero_and_serialises() {
+        let mut a = Architecture::new();
+        // Pile on findings well past 100 points of deductions.
+        for _ in 0..6 {
+            let db = a.add_resource(ResourceKind::Database, "d", 0.0, 0.0);
+            a.set_variant(&db, Some("rds-single-az".into())).unwrap();
+            a.place(&db, Some("us-east-1".into()), Some("us-east-1a".into()))
+                .unwrap();
+        }
+        let s = score(&a, &ProviderProfile::aws());
+        assert_eq!(s.value, 0);
+        assert_eq!(s.grade, 'F');
+        let json = serde_json::to_value(&s).unwrap();
+        assert_eq!(json["value"], 0);
+        assert_eq!(json["grade"], "F");
     }
 
     #[test]

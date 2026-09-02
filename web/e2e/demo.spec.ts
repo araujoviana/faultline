@@ -288,10 +288,13 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
     page.locator('svg.canvas g.node-group:has(rect[data-kind="database"]) .spof-ring'),
   ).toHaveCount(1);
 
-  // resilience-lint -> flags the single-AZ datastore, citing DDIA.
+  // resilience-lint -> flags the single-AZ datastore, citing DDIA, with a score.
   const lint1 = await demo(page, "resilience-lint", {});
   expect(lint1).toContain("single-az-datastore");
   expect(lint1).toMatch(/DDIA|Replication/);
+  expect(lint1).toMatch(/Resilience score: \d+\/100/);
+  await expect(page.locator(".score-badge")).toBeVisible();
+  const score1 = Number((lint1.match(/score: (\d+)\/100/) as RegExpMatchArray)[1]);
 
   // explain -> teaches the datastore's role and names its blast radius.
   const why = await demo(page, "explain", { selection: "database-1" });
@@ -314,6 +317,8 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
   // The high-severity finding clears once the datastore is Multi-AZ.
   const lint2 = await demo(page, "resilience-lint", {});
   expect(lint2).not.toContain("single-az-datastore");
+  const score2 = Number((lint2.match(/score: (\d+)\/100/) as RegExpMatchArray)[1]);
+  expect(score2).toBeGreaterThan(score1);
 
   // estimate-cost again -> the agent shows the cost delta of the harden decision.
   const cost2 = await demo(page, "estimate-cost", {});

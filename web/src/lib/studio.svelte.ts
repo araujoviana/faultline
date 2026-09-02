@@ -5,6 +5,7 @@ import type {
   Explanation,
   Finding,
   ProviderProfile,
+  ResilienceScore,
   Spof,
   StudioCore,
 } from "./core";
@@ -22,6 +23,8 @@ export interface StudioStore {
   readonly lastReport: BlastReport | null;
   readonly spofs: Spof[];
   readonly findings: Finding[];
+  /** 0–100 resilience score for the current design; set by {@link lint}. */
+  readonly score: ResilienceScore | null;
   readonly explanation: Explanation | null;
   readonly cost: CostReport | null;
   /** Change in total monthly cost since the previous estimate, or null if this is the first. */
@@ -37,7 +40,7 @@ export interface StudioStore {
   /** Simulate losing an AZ (`az` set) or a whole region (`az` omitted). Read-only view. */
   simulateFailure(region: string, az?: string): BlastReport;
   findSpofs(): Spof[];
-  /** Rule-based resilience findings, each citing a DDIA principle. Read-only view, not an undo step. */
+  /** Rule-based resilience findings + the 0–100 score. Read-only view, not an undo step. */
   lint(): Finding[];
   /** Explain one resource id, or an edge written `"from->to"`. Read-only view, not an undo step. */
   explain(selection: string): Explanation;
@@ -92,6 +95,7 @@ export function createStudio(core: StudioCore): StudioStore {
   let lastReport = $state<BlastReport | null>(null);
   let spofs = $state<Spof[]>([]);
   let findings = $state<Finding[]>([]);
+  let score = $state<ResilienceScore | null>(null);
   let explanation = $state<Explanation | null>(null);
   let cost = $state<CostReport | null>(null);
   let costDelta = $state<number | null>(null);
@@ -135,6 +139,9 @@ export function createStudio(core: StudioCore): StudioStore {
     get findings() {
       return findings;
     },
+    get score() {
+      return score;
+    },
     get explanation() {
       return explanation;
     },
@@ -150,6 +157,7 @@ export function createStudio(core: StudioCore): StudioStore {
       lastReport = null;
       spofs = [];
       findings = [];
+      score = null;
       explanation = null;
       cost = null;
       costDelta = null;
@@ -195,6 +203,7 @@ export function createStudio(core: StudioCore): StudioStore {
     lint() {
       const found = JSON.parse(core.lint()) as Finding[];
       findings = found;
+      score = JSON.parse(core.resilienceScore()) as ResilienceScore;
       return found;
     },
     explain(selection) {
@@ -217,6 +226,7 @@ export function createStudio(core: StudioCore): StudioStore {
       lastReport = null;
       spofs = [];
       findings = [];
+      score = null;
       explanation = null;
       cost = null;
       costDelta = null;
@@ -227,6 +237,7 @@ export function createStudio(core: StudioCore): StudioStore {
       lastReport = null;
       spofs = [];
       findings = [];
+      score = null;
       explanation = null;
       cost = null;
       costDelta = null;
@@ -239,6 +250,7 @@ export function createStudio(core: StudioCore): StudioStore {
       lastReport = null;
       spofs = [];
       findings = [];
+      score = null;
       explanation = null;
       cost = null;
       costDelta = null;

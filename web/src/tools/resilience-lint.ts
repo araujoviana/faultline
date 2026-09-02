@@ -25,12 +25,15 @@ export function resilienceLintTool(studio: StudioStore): WebMcpTool {
     annotations: { readOnlyHint: true },
     async execute() {
       const findings = studio.lint();
+      const score = studio.score;
+      const header = score ? `Resilience score: ${score.value}/100 (${score.grade}).` : "";
+
       if (findings.length === 0) {
         return {
           content: [
             {
               type: "text",
-              text: "No resilience findings — the design has no known anti-patterns.",
+              text: `${header} No resilience findings — the design has no known anti-patterns.`.trim(),
             },
           ],
         };
@@ -44,7 +47,7 @@ export function resilienceLintTool(studio: StudioStore): WebMcpTool {
         content: [
           {
             type: "text",
-            text: `${findings.length} finding(s):\n${lines.join("\n")}`,
+            text: `${header} ${findings.length} finding(s):\n${lines.join("\n")}`.trim(),
           },
         ],
       };

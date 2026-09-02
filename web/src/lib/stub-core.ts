@@ -32,6 +32,7 @@ export function makeStubCore(overrides: Partial<StudioCore> = {}): StudioCore {
     simulateFailure: () => EMPTY_REPORT,
     findSpofs: () => "[]",
     lint: () => "[]",
+    resilienceScore: () => JSON.stringify({ value: 100, grade: "A", deductions: [] }),
     explain: (selection: string) =>
       JSON.stringify({
         subject: selection,

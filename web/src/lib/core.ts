@@ -82,6 +82,20 @@ export interface Finding {
   citation: Citation;
 }
 
+/** One deduction from the {@link ResilienceScore} (mirrors `lint::Deduction`). */
+export interface Deduction {
+  rule: string;
+  severity: Severity;
+  points: number;
+}
+
+/** 0–100 resilience score derived from the lint findings (mirrors `lint::ResilienceScore`). */
+export interface ResilienceScore {
+  value: number;
+  grade: string;
+  deductions: Deduction[];
+}
+
 /** A plain-language explanation of one resource or edge (mirrors `explain::Explanation`). */
 export interface Explanation {
   subject: string;
@@ -140,6 +154,8 @@ export interface StudioCore {
   findSpofs(): string;
   /** Rule-based resilience findings; returns a JSON {@link Finding}`[]`. Read-only. */
   lint(): string;
+  /** 0–100 resilience score from the lint findings; returns a JSON {@link ResilienceScore}. Read-only. */
+  resilienceScore(): string;
   /** Explain one resource id, or an edge written `"from->to"`; returns a JSON {@link Explanation}. Read-only. */
   explain(selection: string): string;
   /** Rough monthly cost estimate; returns a JSON {@link CostReport}. Read-only. */
@@ -236,6 +252,9 @@ export function createMemoryCore(): StudioCore {
     },
     lint() {
       return "[]";
+    },
+    resilienceScore() {
+      return JSON.stringify({ value: 100, grade: "A", deductions: [] });
     },
     explain(selection) {
       return JSON.stringify({

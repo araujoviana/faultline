@@ -6,8 +6,11 @@ import { createStudio } from "../lib/studio.svelte";
 import { instrumentTool } from "../lib/webmcp-bridge";
 import { resilienceLintTool } from "./resilience-lint";
 
-function setup(findings: Finding[]) {
-  const core = makeStubCore({ lint: () => JSON.stringify(findings) });
+function setup(findings: Finding[], scoreValue = 100, grade = "A") {
+  const core = makeStubCore({
+    lint: () => JSON.stringify(findings),
+    resilienceScore: () => JSON.stringify({ value: scoreValue, grade, deductions: [] }),
+  });
   const studio = createStudio(core);
   const tool = instrumentTool(resilienceLintTool(studio));
   return { studio, tool };
@@ -43,11 +46,12 @@ describe("resilience-lint tool", () => {
   beforeEach(() => clearActivity());
 
   it("formats each finding with its severity, rule id, resource and DDIA citation", async () => {
-    const { studio, tool } = setup([SINGLE_AZ]);
+    const { studio, tool } = setup([SINGLE_AZ], 71, "C");
 
     const result = await tool.execute({});
     const text = result.content[0].text;
 
+    expect(text).toContain("Resilience score: 71/100 (C).");
     expect(text).toContain("1 finding(s):");
     expect(text).toContain("[HIGH] single-az-datastore:");
     expect(text).toContain("(database-1)");
@@ -62,12 +66,18 @@ describe("resilience-lint tool", () => {
     expect(text).not.toContain("(null)");
   });
 
-  it("reports a clean design", async () => {
+  it("reports a clean design with a perfect score", async () => {
     const { tool } = setup([]);
     const result = await tool.execute({});
     expect(result.content[0].text).toBe(
-      "No resilience findings — the design has no known anti-patterns.",
+      "Resilience score: 100/100 (A). No resilience findings — the design has no known anti-patterns.",
     );
+  });
+
+  it("exposes the score on the store for the canvas panel", async () => {
+    const { studio, tool } = setup([SINGLE_AZ], 71, "C");
+    await tool.execute({});
+    expect(studio.score).toEqual({ value: 71, grade: "C", deductions: [] });
   });
 
   it("is marked read-only with no required input", () => {

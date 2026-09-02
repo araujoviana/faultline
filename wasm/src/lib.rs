@@ -9,7 +9,7 @@ use std::str::FromStr;
 use strata_core::analysis::{az_failure_seed, blast_radius, region_failure_seed, spofs};
 use strata_core::cost::estimate as run_estimate;
 use strata_core::explain::explain as run_explain;
-use strata_core::lint::lint as run_lint;
+use strata_core::lint::{lint as run_lint, score as run_score};
 use strata_core::profile::ProviderProfile;
 use strata_core::propose::propose as run_propose;
 use strata_core::{iac, Architecture, ResourceKind};
@@ -173,6 +173,14 @@ impl Studio {
     pub fn estimate_cost(&self) -> String {
         let report = run_estimate(&self.inner, &self.profile);
         serde_json::to_string(&report).expect("CostReport always serialises")
+    }
+
+    /// The design's 0–100 resilience score, derived from the lint findings, as a
+    /// JSON `ResilienceScore`. Read-only.
+    #[wasm_bindgen(js_name = resilienceScore)]
+    pub fn resilience_score(&self) -> String {
+        let score = run_score(&self.inner, &self.profile);
+        serde_json::to_string(&score).expect("ResilienceScore always serialises")
     }
 
     /// Explain one selection — a resource id, or an edge written `"from->to"`.
