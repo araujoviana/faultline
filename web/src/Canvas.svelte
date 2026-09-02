@@ -993,25 +993,31 @@ function runSimulation() {
 
   .findings {
     border: 1px solid var(--line);
-    border-radius: 8px;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
+    border-radius: var(--radius-md, 9px);
+    padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+    font-size: var(--text-sm, 0.85rem);
+    background: var(--bg-sunken, transparent);
+    max-height: 34vh;
+    overflow-y: auto;
   }
   .findings-head {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    position: sticky;
+    top: 0;
+    background: inherit;
   }
   .findings-head button {
     margin-left: auto;
   }
   .findings ul {
     list-style: none;
-    margin: 0.4rem 0 0;
+    margin: 0.35rem 0 0;
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.45rem;
   }
   .findings li {
     border-left: 2px solid var(--line);
@@ -1037,11 +1043,13 @@ function runSimulation() {
   .findings .f-detail {
     margin: 0.15rem 0 0;
     color: var(--fg);
+    font-size: var(--text-xs, 0.78rem);
   }
   .findings .f-cite {
     margin: 0.15rem 0 0;
     color: var(--muted);
-    font-size: 0.75rem;
+    font-family: var(--font-mono, ui-monospace);
+    font-size: 0.72rem;
   }
 
   dialog.iac {
