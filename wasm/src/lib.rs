@@ -7,6 +7,7 @@
 use std::str::FromStr;
 
 use strata_core::analysis::{az_failure_seed, blast_radius, spofs};
+use strata_core::explain::explain as run_explain;
 use strata_core::lint::lint as run_lint;
 use strata_core::profile::ProviderProfile;
 use strata_core::{iac, Architecture, ResourceKind};
@@ -148,6 +149,14 @@ impl Studio {
     pub fn lint(&self) -> String {
         let found = run_lint(&self.inner, &self.profile);
         serde_json::to_string(&found).expect("Finding list always serialises")
+    }
+
+    /// Explain one selection — a resource id, or an edge written `"from->to"`.
+    /// Read-only; returns an `Explanation` as JSON.
+    #[wasm_bindgen(js_name = explain)]
+    pub fn explain(&self, selection: &str) -> String {
+        let explanation = run_explain(&self.inner, &self.profile, selection);
+        serde_json::to_string(&explanation).expect("Explanation always serialises")
     }
 
     /// The active provider profile as JSON (service catalogue + region topology).

@@ -82,6 +82,17 @@ export interface Finding {
   citation: Citation;
 }
 
+/** A plain-language explanation of one resource or edge (mirrors `explain::Explanation`). */
+export interface Explanation {
+  subject: string;
+  selection_kind: "resource" | "dependency";
+  summary: string;
+  depends_on: string[];
+  depended_on_by: string[];
+  takes_down: string[];
+  notes: string[];
+}
+
 export interface ProfileVariant {
   id: string;
   display_name: string;
@@ -111,6 +122,8 @@ export interface StudioCore {
   findSpofs(): string;
   /** Rule-based resilience findings; returns a JSON {@link Finding}`[]`. Read-only. */
   lint(): string;
+  /** Explain one resource id, or an edge written `"from->to"`; returns a JSON {@link Explanation}. Read-only. */
+  explain(selection: string): string;
   /** Emit the architecture as infrastructure-as-code (read-only). Throws on an unknown target. */
   generateIac(target: string): string;
   /** The active provider profile as JSON. */
@@ -190,6 +203,17 @@ export function createMemoryCore(): StudioCore {
     },
     lint() {
       return "[]";
+    },
+    explain(selection) {
+      return JSON.stringify({
+        subject: selection,
+        selection_kind: selection.includes("->") ? "dependency" : "resource",
+        summary: "",
+        depends_on: [],
+        depended_on_by: [],
+        takes_down: [],
+        notes: [],
+      });
     },
     generateIac(target) {
       if (target && target !== "terraform") {

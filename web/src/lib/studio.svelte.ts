@@ -1,6 +1,7 @@
 import type {
   ArchitectureState,
   BlastReport,
+  Explanation,
   Finding,
   ProviderProfile,
   Spof,
@@ -20,6 +21,7 @@ export interface StudioStore {
   readonly lastReport: BlastReport | null;
   readonly spofs: Spof[];
   readonly findings: Finding[];
+  readonly explanation: Explanation | null;
   addResource(kind: string, label: string, x?: number, y?: number): string;
   connect(from: string, to: string): void;
   /** Move a resource to a new canvas position (one undo step). */
@@ -30,6 +32,8 @@ export interface StudioStore {
   findSpofs(): Spof[];
   /** Rule-based resilience findings, each citing a DDIA principle. Read-only view, not an undo step. */
   lint(): Finding[];
+  /** Explain one resource id, or an edge written `"from->to"`. Read-only view, not an undo step. */
+  explain(selection: string): Explanation;
   /** Emit the architecture as infrastructure-as-code. Read-only: no mutation, no undo step. */
   generateIac(target?: string): string;
   clearAnalysis(): void;
@@ -79,6 +83,7 @@ export function createStudio(core: StudioCore): StudioStore {
   let lastReport = $state<BlastReport | null>(null);
   let spofs = $state<Spof[]>([]);
   let findings = $state<Finding[]>([]);
+  let explanation = $state<Explanation | null>(null);
 
   let profile: ProviderProfile = EMPTY_PROFILE;
   try {
@@ -118,6 +123,9 @@ export function createStudio(core: StudioCore): StudioStore {
     },
     get findings() {
       return findings;
+    },
+    get explanation() {
+      return explanation;
     },
     addResource(kind, label, x, y) {
       checkpoint();
@@ -161,6 +169,11 @@ export function createStudio(core: StudioCore): StudioStore {
       findings = found;
       return found;
     },
+    explain(selection) {
+      const result = JSON.parse(core.explain(selection)) as Explanation;
+      explanation = result;
+      return result;
+    },
     generateIac(target = "terraform") {
       return core.generateIac(target);
     },
@@ -168,6 +181,7 @@ export function createStudio(core: StudioCore): StudioStore {
       lastReport = null;
       spofs = [];
       findings = [];
+      explanation = null;
     },
     reset() {
       checkpoint();
@@ -175,6 +189,7 @@ export function createStudio(core: StudioCore): StudioStore {
       lastReport = null;
       spofs = [];
       findings = [];
+      explanation = null;
       refresh();
     },
     undo() {
@@ -184,6 +199,7 @@ export function createStudio(core: StudioCore): StudioStore {
       lastReport = null;
       spofs = [];
       findings = [];
+      explanation = null;
       refresh();
     },
   };

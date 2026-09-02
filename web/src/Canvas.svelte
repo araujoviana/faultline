@@ -388,6 +388,8 @@ function runSimulation() {
           </label>
         {/if}
 
+        <button class="ghost" onclick={() => studio.explain(node.id)}>Explain this</button>
+
         <button
           class="ghost danger"
           onclick={() => {
@@ -431,6 +433,31 @@ function runSimulation() {
             </li>
           {/each}
         </ul>
+      </div>
+    {/if}
+
+    {#if studio.explanation}
+      {@const e = studio.explanation}
+      <div class="explain-panel" role="status">
+        <div class="findings-head">
+          <strong>{e.subject}</strong>
+          <button class="ghost" onclick={() => studio.clearAnalysis()}>Clear</button>
+        </div>
+        <p class="e-summary">{e.summary}</p>
+        {#if e.depends_on.length}
+          <p class="e-row"><span>Depends on</span> {e.depends_on.join(", ")}</p>
+        {/if}
+        {#if e.depended_on_by.length}
+          <p class="e-row"><span>Depended on by</span> {e.depended_on_by.join(", ")}</p>
+        {/if}
+        {#if e.takes_down.length}
+          <p class="e-row"><span>Its loss takes down</span> {e.takes_down.join(", ")}</p>
+        {/if}
+        {#if e.notes.length}
+          <ul>
+            {#each e.notes as note, i (i)}<li>{note}</li>{/each}
+          </ul>
+        {/if}
       </div>
     {/if}
 
@@ -1050,6 +1077,42 @@ function runSimulation() {
     color: var(--muted);
     font-family: var(--font-mono, ui-monospace);
     font-size: 0.72rem;
+  }
+
+  .explain-panel {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    background: var(--bg-sunken);
+    max-height: 34vh;
+    overflow-y: auto;
+  }
+  .explain-panel .e-summary {
+    margin: 0.3rem 0 0;
+    color: var(--fg);
+  }
+  .explain-panel .e-row {
+    margin: 0.3rem 0 0;
+    font-size: var(--text-xs);
+    color: var(--fg);
+  }
+  .explain-panel .e-row span {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.62rem;
+    color: var(--muted);
+    margin-right: 0.4rem;
+  }
+  .explain-panel ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: var(--text-xs);
+    color: var(--muted);
   }
 
   dialog.iac {

@@ -17,6 +17,7 @@ const TOOL_NAMES = [
   "simulate-failure",
   "find-spofs",
   "resilience-lint",
+  "explain",
   "generate-iac",
 ];
 
@@ -268,6 +269,12 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
   const lint1 = await demo(page, "resilience-lint", {});
   expect(lint1).toContain("single-az-datastore");
   expect(lint1).toMatch(/DDIA|Replication/);
+
+  // explain -> teaches the datastore's role and names its blast radius.
+  const why = await demo(page, "explain", { selection: "database-1" });
+  expect(why).toContain("system of record");
+  expect(why).toContain("takes down");
+  await expect(page.locator(".explain-panel")).toContainText("orders");
 
   // Harden -> Multi-AZ, then re-simulate: DB degrades (~90s), compute + LB healthy.
   await demo(page, "configure-resource", {

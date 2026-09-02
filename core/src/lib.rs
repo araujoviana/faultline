@@ -15,6 +15,7 @@ use std::str::FromStr;
 use serde::{Deserialize, Serialize};
 
 pub mod analysis;
+pub mod explain;
 pub mod iac;
 pub mod lint;
 pub mod profile;
