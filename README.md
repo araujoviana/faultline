@@ -1,8 +1,9 @@
 # Faultline
 
-**You and your AI agent design a cloud architecture on a canvas — then fail an availability zone and
-watch the blast radius spread.** Lint the design against cited resilience principles and generate the
-Terraform, together.
+**You and your AI agent design a cloud architecture on a canvas — describe it in a sentence and the
+agent proposes the topology, then fail an availability zone (or a whole region) and watch the blast
+radius spread.** Estimate the monthly cost, lint the design against cited resilience principles, and
+generate the Terraform — together.
 
 🔗 **Live:** <https://faultline-studio.pages.dev> · 📖 **Tool surface:** [`/learn`](https://faultline-studio.pages.dev/learn)
 
@@ -12,12 +13,13 @@ Terraform, together.
 A **Rust-based submission to the [OpenAI WebMCP Challenge](https://openai.com/webmcp-challenge/)** — a
 web app that gets meaningfully better when a human and their AI agent use it together, built on
 [WebMCP](https://webmachinelearning.github.io/webmcp/). The human sets goals and picks trade-offs; the
-agent proposes topology, wires dependencies, runs the failure simulation, lints for anti-patterns, and
-generates infrastructure-as-code — through typed tools registered on `document.modelContext`.
+agent proposes topology from a prompt, wires dependencies, runs the failure simulation, estimates
+cost, explains any part of the design, lints for anti-patterns, and generates infrastructure-as-code —
+through typed tools registered on `document.modelContext`.
 
-**Design → Simulate → Harden.** The compute core (graph model, blast-radius analysis, SPOF scan,
-resilience-lint rule engine, Terraform HCL emitter) is a pure Rust library compiled to WASM; the shell
-is Svelte 5. **No API key, no account, no backend** — WebMCP ships no model, so the judge's own agent
+**Design → Simulate → Harden.** The compute core (graph model, requirements-to-topology proposer,
+blast-radius analysis, SPOF scan, cost estimator, resilience-lint rule engine, Terraform HCL emitter)
+is a pure Rust library compiled to WASM; the shell is Svelte 5. **No API key, no account, no backend** — WebMCP ships no model, so the judge's own agent
 supplies the reasoning and the tools are just JavaScript. **$0 of AI spend.**
 
 ## Runs in
@@ -30,12 +32,15 @@ Full manual test script: [`web/TESTING.md`](web/TESTING.md).
 
 ## The loop
 
-1. **Design.** Drop resources on the infinite canvas (compute, database, load balancer, queue, cache,
-   object store, CDN, DNS, functions, API gateway). The agent wires dependencies, sets AWS variants
-   and region/AZ placement, and lays the diagram out.
-2. **Simulate.** `simulate-failure` knocks out one availability zone; the blast radius propagates
-   along the dependency edges and the canvas lights up — red for down, amber for degraded, with a
-   summary banner. `find-spofs` rings every single point of failure and names what it orphans.
+1. **Design.** Describe the system in a sentence and `propose-architecture` lays down a connected,
+   configured, placed topology — or drop resources on the infinite canvas by hand (compute, database,
+   load balancer, queue, cache, object store, CDN, DNS, functions, API gateway). The agent wires
+   dependencies, sets AWS variants and region/AZ placement, `explain`s any node or edge, and
+   `estimate-cost` puts a monthly-dollar figure on the design (and on each change).
+2. **Simulate.** `simulate-failure` knocks out one availability zone — or a whole region — and the
+   blast radius propagates along the dependency edges; the canvas lights up red for down, amber for
+   degraded, with a summary banner. `find-spofs` rings every single point of failure and names what
+   it orphans.
 3. **Harden.** `resilience-lint` runs deterministic checks over the graph; each finding cites the
    chapter of *Designing Data-Intensive Applications* (2nd ed.) that explains why it matters. Fix the
    design, re-simulate, and `generate-iac` emits the Terraform for review.
@@ -45,17 +50,20 @@ log. The human stays in charge.
 
 ## WebMCP tools
 
-Eight intent-level tools (source of truth: `web/src/tools/`, rendered live at `/learn`):
+Eleven intent-level tools (source of truth: `web/src/tools/`, rendered live at `/learn`):
 
 | Tool | Kind | What it does |
 |---|---|---|
+| `propose-architecture` | write | Build a starting topology from a plain-language requirements sentence |
 | `add-resource` | write | Add a node of a given kind + label |
 | `connect` | write | Directed dependency edge `from → to` |
 | `move-resource` | write | Reposition a node (mirrors a human drag) |
 | `configure-resource` | write | Set provider variant and/or region/AZ placement |
-| `simulate-failure` | read-only | Fail one AZ; report the blast radius |
+| `simulate-failure` | read-only | Fail one AZ (or a whole region); report the blast radius |
 | `find-spofs` | read-only | List single points of failure and what they orphan |
 | `resilience-lint` | read-only | Rule-based resilience checks, each with a DDIA citation |
+| `explain` | read-only | Plain-language account of a resource or edge: role, dependents, blast radius, principle |
+| `estimate-cost` | read-only | Rough monthly cost from a bundled pricing snapshot, with the delta since the last estimate |
 | `generate-iac` | read-only | Emit the architecture as Terraform HCL |
 
 ## Stack

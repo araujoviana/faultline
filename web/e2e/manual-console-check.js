@@ -23,6 +23,7 @@
   }
 
   const EXPECTED = [
+    "propose-architecture",
     "add-resource",
     "connect",
     "move-resource",
@@ -30,6 +31,8 @@
     "simulate-failure",
     "find-spofs",
     "resilience-lint",
+    "explain",
+    "estimate-cost",
     "generate-iac",
   ];
 
@@ -124,6 +127,10 @@
   console.log("%c— Step 4: resilience-lint —", "color:#8b5cf6;font-weight:bold");
   await call("resilience-lint", {}, ["single-az-datastore", "DDIA"], "must cite DDIA");
 
+  console.log("%c— Step 4b: explain + estimate-cost —", "color:#8b5cf6;font-weight:bold");
+  await call("explain", { selection: "database-1" }, ["system of record", "takes down"]);
+  await call("estimate-cost", {}, ["/month"]);
+
   console.log(
     "%c— Step 5: harden → Multi-AZ, re-simulate, re-lint —",
     "color:#8b5cf6;font-weight:bold",
@@ -140,6 +147,12 @@
   ]);
   const relint = await call("resilience-lint", {}, [], "single-az finding should be GONE");
   results[results.length - 1].ok = relint.includes("single-az-datastore") ? "❌" : "✅";
+  await call(
+    "estimate-cost",
+    {},
+    ["since the last estimate"],
+    "Multi-AZ costs more → shows a delta",
+  );
   console.log(
     "%c👁 canvas: database-1 AMBER, compute-1 + load-balancer-1 healthy; banner '0 down, 1 degraded'",
     "color:#0aa",
@@ -153,6 +166,13 @@
     "Moved load-balancer-1 to (40, 40)",
   ]);
   console.log("%c👁 canvas: alb node jumps to top-left; edge follows", "color:#0aa");
+
+  console.log("%c— Step 7b: simulate a whole-region loss —", "color:#8b5cf6;font-weight:bold");
+  await call("simulate-failure", { region: "us-east-1" }, ["region us-east-1 failure", "3 down"]);
+  console.log(
+    "%c👁 canvas: all 3 nodes RED again; banner 'region us-east-1 — 3 down'",
+    "color:#0aa",
+  );
 
   // Summary
   const pass = results.filter((r) => r.ok === "✅").length;
