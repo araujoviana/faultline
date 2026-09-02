@@ -1,19 +1,12 @@
-//! Rough monthly cost estimate for an [`Architecture`].
-//!
-//! Pure lookup: each configured resource contributes its variant's bundled
-//! `monthly_usd` snapshot from the active [`ProviderProfile`]. A single-zone
-//! placement is charged at the list price; a regional (multi-AZ) placement of a
-//! variant that isn't already a multi-AZ service is charged at 2× to approximate
-//! the second copy.
-//!
-//! This is an order-of-magnitude figure for comparing designs, not a bill.
+//! Rough monthly cost estimate: each configured resource contributes its
+//! variant's bundled `monthly_usd` snapshot from the active [`ProviderProfile`].
+//! An order-of-magnitude figure for comparing designs, not a bill.
 
 use serde::Serialize;
 
 use crate::profile::ProviderProfile;
 use crate::Architecture;
 
-/// One resource's contribution to the monthly estimate.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CostLine {
     pub resource: String,
@@ -22,7 +15,6 @@ pub struct CostLine {
     pub monthly_usd: f64,
 }
 
-/// The whole-design monthly estimate.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct CostReport {
     pub total_monthly_usd: f64,
@@ -31,8 +23,8 @@ pub struct CostReport {
     pub unpriced: Vec<String>,
 }
 
-/// Variants that are already multi-AZ by construction, so a regional placement
-/// does not double their cost.
+/// Variants already multi-AZ by construction, so a regional placement doesn't
+/// double their cost.
 fn already_redundant(variant_id: &str) -> bool {
     matches!(
         variant_id,
@@ -137,7 +129,6 @@ mod tests {
     #[test]
     fn regional_placement_of_a_plain_variant_doubles_it() {
         let mut a = stack();
-        // Move the single-AZ engine to a regional deployment: ≈ 2 copies.
         a.place("database-1", Some("us-east-1".into()), None)
             .unwrap();
         let r = estimate(&a, &ProviderProfile::aws());

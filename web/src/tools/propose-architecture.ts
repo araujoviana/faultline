@@ -2,15 +2,8 @@ import type { StudioStore } from "../lib/studio.svelte";
 import type { WebMcpTool } from "../lib/webmcp-bridge";
 
 /**
- * Lay down a starting architecture from a one-line requirements sentence — the
- * opening move of a design session. Replaces whatever is on the canvas with a
- * connected, configured, placed topology the human can then adjust.
- *
- * Deterministic keyword matching in the Rust core (no model): it reads intent
- * like "read-heavy", "background jobs", "serverless", "survive a region
- * outage", "prototype", a region name. The result is a starting point, not a
- * final design — running resilience-lint afterwards is expected to still have
- * something to say. One undo step.
+ * Replace the canvas with a starting architecture built from a requirements
+ * sentence (deterministic keyword matching in the Rust core). One undo step.
  */
 export function proposeArchitectureTool(studio: StudioStore): WebMcpTool {
   return {

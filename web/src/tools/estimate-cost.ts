@@ -2,11 +2,8 @@ import type { StudioStore } from "../lib/studio.svelte";
 import type { WebMcpTool } from "../lib/webmcp-bridge";
 
 /**
- * Rough monthly cost estimate for the current design, from the bundled pricing
- * snapshot in the active provider profile. Read-only. Reports the total, a
- * per-resource breakdown worst-first, any unpriced resources, and — from the
- * second call on — the change since the previous estimate, so the agent can
- * show the cost delta of a design change.
+ * Rough monthly cost of the current design from the bundled pricing snapshot,
+ * plus the delta since the previous estimate. Read-only.
  */
 export function estimateCostTool(studio: StudioStore): WebMcpTool {
   return {

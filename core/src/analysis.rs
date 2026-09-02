@@ -52,13 +52,9 @@ pub fn az_failure_seed(arch: &Architecture, az: &str) -> Vec<String> {
         .collect()
 }
 
-/// Resource ids directly knocked out by losing the whole region `region`:
-/// everything placed in it — zonally or regionally — except globally
-/// distributed services (CDN, DNS), which have no single-region footprint.
-///
-/// The "save" for a region loss is having a copy of the stack in *another*
-/// region: those resources are not in the seed, so they stay healthy, and a
-/// global DNS layer stays up to route to them.
+/// Resource ids knocked out by losing the whole region: everything placed in it
+/// except globally distributed services (CDN, DNS). A copy of the stack in
+/// another region is not in the seed, so it survives.
 pub fn region_failure_seed(arch: &Architecture, region: &str) -> Vec<String> {
     arch.resources
         .iter()
@@ -321,7 +317,6 @@ mod tests {
         let p = ProviderProfile::aws();
         let seed = region_failure_seed(&a, "us-east-1");
         let r = blast_radius(&a, &p, &seed, Some("us-east-1"), "region us-east-1");
-        // The whole us-east-1 chain is down.
         assert!(r.down.contains(&"compute-1".to_string()));
         assert!(r.down.contains(&"database-1".to_string()));
         assert!(r.down.contains(&"load-balancer-1".to_string()));

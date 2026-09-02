@@ -2,11 +2,9 @@ import type { StudioStore } from "../lib/studio.svelte";
 import type { WebMcpTool } from "../lib/webmcp-bridge";
 
 /**
- * Simulate a failure and report the blast radius. With `az` set, loses one
- * availability zone; with `az` omitted, loses the whole region (everything
- * placed there except global services — a second region and global DNS are what
- * survive it). The result also drives the canvas overlay (down = red,
- * degraded = amber).
+ * Simulate the loss of one availability zone (`az` set) or a whole region (`az`
+ * omitted) and report the blast radius. Also drives the canvas overlay
+ * (down = red, degraded = amber).
  */
 export function simulateFailureTool(studio: StudioStore): WebMcpTool {
   return {

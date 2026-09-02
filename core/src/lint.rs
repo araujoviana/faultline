@@ -59,7 +59,6 @@ pub struct Finding {
     pub citation: Citation,
 }
 
-/// A single deduction from the [`ResilienceScore`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Deduction {
     pub rule: String,
@@ -67,14 +66,12 @@ pub struct Deduction {
     pub points: u32,
 }
 
-/// A 0–100 resilience score derived from the lint findings — the "harden" beat's
-/// portable artifact. 100 is a design with no known anti-patterns.
+/// A 0–100 resilience score derived from the lint findings (100 = no findings).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ResilienceScore {
     pub value: u32,
-    /// Letter grade: `A` (90+), `B` (75+), `C` (60+), `D` (40+), else `F`.
+    /// `A` (90+), `B` (75+), `C` (60+), `D` (40+), else `F`.
     pub grade: char,
-    /// What was subtracted from 100, worst-first.
     pub deductions: Vec<Deduction>,
 }
 

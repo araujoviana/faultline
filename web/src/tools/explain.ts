@@ -2,11 +2,7 @@ import type { StudioStore } from "../lib/studio.svelte";
 import type { WebMcpTool } from "../lib/webmcp-bridge";
 
 /**
- * Explain one thing on the canvas — a resource or a dependency edge — in plain
- * language: its role in the design, what it depends on and what depends on it,
- * what its loss would take down, and one architectural principle that applies
- * (cited to *Designing Data-Intensive Applications*). Read-only: it teaches, it
- * changes nothing.
+ * Explain a resource or dependency edge in plain language. Read-only.
  */
 export function explainTool(studio: StudioStore): WebMcpTool {
   return {

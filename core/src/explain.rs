@@ -1,13 +1,5 @@
-//! Plain-language explanation of one thing on the canvas — a resource or a
-//! dependency edge.
-//!
-//! This is the teaching surface: the human (or their agent) selects something
-//! and asks "why is this here / what does it do / what happens if it fails".
-//! Pure read: [`explain`] reads the graph and the active profile and returns a
-//! structured [`Explanation`]; it changes nothing.
-//!
-//! Edge convention, as everywhere in the core: `a -> b` means **`a` depends on
-//! `b`** (a resource's out-edges are its dependencies).
+//! Plain-language explanation of a selected resource or dependency edge — the
+//! "why is this here" surface. Pure read.
 
 use serde::Serialize;
 
@@ -15,29 +7,19 @@ use crate::analysis::blast_radius;
 use crate::profile::ProviderProfile;
 use crate::{Architecture, ResourceKind};
 
-/// A structured explanation of a selected resource or edge.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Explanation {
-    /// What is being explained, e.g. `"database-1 (orders)"` or
-    /// `"compute-1 → database-1"`.
     pub subject: String,
     /// `"resource"` or `"dependency"`.
     pub selection_kind: String,
-    /// One-line description of the role this plays in the design.
     pub summary: String,
-    /// Resource ids this depends on (its out-edges), with labels.
     pub depends_on: Vec<String>,
-    /// Resource ids that depend on this (its in-edges), with labels.
     pub depended_on_by: Vec<String>,
-    /// Everything that goes fully unavailable if this resource is lost
-    /// (transitive), excluding the resource itself.
+    /// Everything transitively knocked out if this resource is lost.
     pub takes_down: Vec<String>,
-    /// Observations about the current configuration and one architectural
-    /// principle that applies, each a full sentence.
     pub notes: Vec<String>,
 }
 
-/// The vendor-neutral role each [`ResourceKind`] plays.
 fn role(kind: ResourceKind) -> &'static str {
     match kind {
         ResourceKind::Compute => {
@@ -73,8 +55,7 @@ fn role(kind: ResourceKind) -> &'static str {
     }
 }
 
-/// One architectural principle relevant to this kind, cited to *Designing
-/// Data-Intensive Applications* (2nd ed.).
+/// One DDIA-cited principle relevant to this kind.
 fn principle(kind: ResourceKind) -> &'static str {
     match kind {
         ResourceKind::Database => {
@@ -115,8 +96,7 @@ fn with_label(arch: &Architecture, id: &str) -> String {
 pub fn explain(arch: &Architecture, profile: &ProviderProfile, selection: &str) -> Explanation {
     let sel = selection.trim();
 
-    // Edge form: "a->b" or "a → b".
-    let edge_parts: Option<(&str, &str)> = sel
+    let edge_parts = sel
         .split_once("->")
         .or_else(|| sel.split_once('→'))
         .map(|(a, b)| (a.trim(), b.trim()));
@@ -265,7 +245,6 @@ fn explain_resource(arch: &Architecture, profile: &ProviderProfile, id: &str) ->
 mod tests {
     use super::*;
 
-    /// alb -> ec2-asg -> rds-single-az, DB pinned to us-east-1a.
     fn demo() -> Architecture {
         let mut a = Architecture::new();
         let lb = a.add_resource(ResourceKind::LoadBalancer, "alb", 0.0, 0.0);
@@ -291,7 +270,6 @@ mod tests {
         assert!(e.summary.contains("system of record"));
         assert_eq!(e.depended_on_by, ["compute-1 (api)"]);
         assert!(e.depends_on.is_empty());
-        // Losing the single-AZ DB takes the whole chain with it.
         assert_eq!(e.takes_down, ["compute-1 (api)", "load-balancer-1 (alb)"]);
         assert!(e
             .notes

@@ -1,14 +1,6 @@
-//! Turn a one-line requirements sentence into a starting architecture.
-//!
-//! This is the "Design" beat's opening move: instead of the agent adding ten
-//! resources one call at a time, [`propose`] reads a prompt like *"public web
-//! app with a Postgres database that should survive an availability-zone
-//! outage"* and lays down a connected, configured, placed topology the human can
-//! then adjust.
-//!
-//! Deterministic keyword matching — no model, no I/O. The vocabulary is
-//! deliberately small; the result is a *starting point*, not a final design, and
-//! [`crate::lint`] is expected to still have something to say about it.
+//! Turn a one-line requirements sentence into a starting architecture by
+//! deterministic keyword matching — no model, no I/O. The result is a starting
+//! point, not a final design: [`crate::lint`] is expected to still flag things.
 
 use crate::{Architecture, ResourceKind};
 
@@ -24,9 +16,8 @@ pub fn propose(requirements: &str) -> Architecture {
     };
     let zone_a = format!("{region}a");
 
-    // Resilience posture: an explicit "cheap / prototype / quick" prompt gets a
-    // single-AZ datastore (and a lint finding to teach from); everything else
-    // gets a replicated, regional datastore.
+    // A "cheap / prototype" prompt gets a single-AZ datastore on purpose — so
+    // the lint has something to teach from. Everything else gets Multi-AZ.
     let budget = has(&[
         "prototype",
         "cheap",
@@ -90,7 +81,6 @@ pub fn propose(requirements: &str) -> Architecture {
 
     let mut a = Architecture::new();
 
-    // ---- ingress ----------------------------------------------------------
     let dns = if wants_dr {
         let id = a.add_resource(ResourceKind::Dns, "router", 0.0, 0.0);
         a.set_variant(&id, Some("route53".into())).unwrap();
@@ -114,7 +104,6 @@ pub fn propose(requirements: &str) -> Architecture {
         a.connect(dns, &front).unwrap();
     }
 
-    // ---- compute --------------------------------------------------------
     let app = if serverless {
         let f = a.add_resource(ResourceKind::Functions, "api", 0.0, 0.0);
         a.set_variant(&f, Some("lambda".into())).unwrap();
@@ -128,7 +117,6 @@ pub fn propose(requirements: &str) -> Architecture {
     };
     a.connect(&front, &app).unwrap();
 
-    // ---- data ----------------------------------------------------------
     let db = a.add_resource(ResourceKind::Database, "primary datastore", 0.0, 0.0);
     if key_value {
         a.set_variant(&db, Some("dynamodb".into())).unwrap();
@@ -143,7 +131,6 @@ pub fn propose(requirements: &str) -> Architecture {
     }
     a.connect(&app, &db).unwrap();
 
-    // ---- optional tiers ------------------------------------------------
     if wants_cache {
         let cache = a.add_resource(ResourceKind::Cache, "cache", 0.0, 0.0);
         a.set_variant(&cache, Some("elasticache".into())).unwrap();
@@ -181,9 +168,8 @@ pub fn propose(requirements: &str) -> Architecture {
     a
 }
 
-/// Assign canvas positions by dependency tier: ingress at the top, data at the
-/// bottom, siblings spread horizontally. Keeps a freshly proposed design
-/// readable before anyone drags it around.
+/// Position nodes by dependency tier: ingress at the top, data at the bottom,
+/// siblings spread horizontally.
 fn layout(a: &mut Architecture) {
     fn tier(kind: ResourceKind) -> i32 {
         match kind {
@@ -231,9 +217,7 @@ mod tests {
         assert!(kinds(&a).contains(&ResourceKind::LoadBalancer));
         assert!(kinds(&a).contains(&ResourceKind::Compute));
         assert!(kinds(&a).contains(&ResourceKind::Database));
-        // Every resource is connected into one graph.
         assert_eq!(a.edges.len(), 2);
-        // Multi-AZ datastore by default → no high-severity findings.
         let findings = lint(&a, &ProviderProfile::aws());
         assert!(
             !findings.iter().any(|f| f.severity == Severity::High),
