@@ -269,6 +269,16 @@ function runSimulation() {
   const [region, az] = selectedZone.split("|");
   if (region && az) studio.simulateFailure(region, az);
 }
+
+let selectedRegion = $state("");
+$effect(() => {
+  if (!selectedRegion && studio.profile.regions.length) {
+    selectedRegion = studio.profile.regions[0].id;
+  }
+});
+function runRegionSimulation() {
+  if (selectedRegion) studio.simulateFailure(selectedRegion);
+}
 </script>
 
 <!--
@@ -349,6 +359,14 @@ function runSimulation() {
         {/each}
       </select>
       <button onclick={runSimulation}>Fail this AZ</button>
+    {/if}
+    {#if studio.profile.regions.length}
+      <select bind:value={selectedRegion} aria-label="Region to fail">
+        {#each studio.profile.regions as r (r.id)}
+          <option value={r.id}>{r.id}</option>
+        {/each}
+      </select>
+      <button onclick={runRegionSimulation}>Fail this region</button>
     {/if}
 
     <h2>Analyze</h2>

@@ -34,7 +34,8 @@ export interface StudioStore {
   move(id: string, x: number, y: number): void;
   removeResource(id: string): void;
   configure(id: string, variant?: string, region?: string, az?: string): void;
-  simulateFailure(region: string, az: string): BlastReport;
+  /** Simulate losing an AZ (`az` set) or a whole region (`az` omitted). Read-only view. */
+  simulateFailure(region: string, az?: string): BlastReport;
   findSpofs(): Spof[];
   /** Rule-based resilience findings, each citing a DDIA principle. Read-only view, not an undo step. */
   lint(): Finding[];
@@ -181,7 +182,7 @@ export function createStudio(core: StudioCore): StudioStore {
       core.configure(id, variant, region, az);
       refresh();
     },
-    simulateFailure(region, az) {
+    simulateFailure(region, az = "") {
       const report = JSON.parse(core.simulateFailure(region, az)) as BlastReport;
       lastReport = report;
       return report;

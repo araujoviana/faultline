@@ -56,10 +56,17 @@ describe("simulate-failure tool", () => {
     expect(result.content[0].text).toContain("not an availability zone");
   });
 
-  it("is marked read-only, hints untrusted output, and requires region + az", () => {
+  it("fails a whole region when az is omitted", async () => {
+    const { tool } = setup({ down: ["compute-1", "database-1"] });
+    const result = await tool.execute({ region: "us-east-1" });
+    expect(result.content[0].text).toContain("region us-east-1 failure");
+    expect(result.content[0].text).toContain("2 down");
+  });
+
+  it("is marked read-only, hints untrusted output, and requires only region", () => {
     const { tool } = setup();
     expect(tool.annotations?.readOnlyHint).toBe(true);
     expect(tool.annotations?.untrustedContentHint).toBe(true);
-    expect((tool.inputSchema as { required: string[] }).required).toEqual(["region", "az"]);
+    expect((tool.inputSchema as { required: string[] }).required).toEqual(["region"]);
   });
 });

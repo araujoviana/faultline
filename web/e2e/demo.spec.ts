@@ -334,5 +334,13 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
   expect(hcl).toContain("multi_az");
   expect(hcl).toContain("target_group_arns");
 
+  // A whole-region loss is a different failure domain: Multi-AZ does not survive
+  // it — every resource in us-east-1 goes down.
+  const regionOut = await demo(page, "simulate-failure", { region: "us-east-1" });
+  expect(regionOut).toContain("region us-east-1 failure");
+  expect(regionOut).toContain("3 down");
+  await expect(page.locator('svg.canvas g.node-group[data-status="down"]')).toHaveCount(3);
+  await expect(page.locator(".banner")).toContainText("region us-east-1");
+
   expect(errors).toEqual([]);
 });

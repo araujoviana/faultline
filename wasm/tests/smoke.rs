@@ -77,6 +77,12 @@ fn az_failure_blast_radius_runs_on_the_real_wasm() {
     assert!(report.contains("\"down\":[]"));
     assert!(report.contains("fail over"));
     assert!(studio.find_spofs().contains("[]"));
+
+    // A whole-region loss (empty az) still takes the Multi-AZ stack down.
+    let region = studio.simulate_failure("us-east-1", "").unwrap();
+    assert!(region.contains("region us-east-1"));
+    assert!(region.contains("database-1"));
+    assert!(region.contains("compute-1"));
 }
 
 #[wasm_bindgen_test]

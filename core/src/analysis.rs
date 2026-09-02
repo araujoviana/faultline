@@ -52,6 +52,21 @@ pub fn az_failure_seed(arch: &Architecture, az: &str) -> Vec<String> {
         .collect()
 }
 
+/// Resource ids directly knocked out by losing the whole region `region`:
+/// everything placed in it — zonally or regionally — except globally
+/// distributed services (CDN, DNS), which have no single-region footprint.
+///
+/// The "save" for a region loss is having a copy of the stack in *another*
+/// region: those resources are not in the seed, so they stay healthy, and a
+/// global DNS layer stays up to route to them.
+pub fn region_failure_seed(arch: &Architecture, region: &str) -> Vec<String> {
+    arch.resources
+        .iter()
+        .filter(|r| !r.kind.is_global() && r.placement.region.as_deref() == Some(region))
+        .map(|r| r.id.clone())
+        .collect()
+}
+
 /// Propagate a failure from `down_seed` through the dependency graph.
 ///
 /// `failed_region`, when set, enables the "mid-failover" degradation note for
@@ -289,6 +304,41 @@ mod tests {
         assert_eq!(r.down, ["compute-1"]);
         assert_eq!(r.degraded, ["load-balancer-1"]);
         assert!(r.notes.iter().any(|n| n.contains("lost 1 of 2")));
+    }
+
+    #[test]
+    fn region_failure_downs_the_local_stack_but_not_a_second_region() {
+        // us-east-1 stack, plus a compute in eu-west-1 fronted by global DNS.
+        let mut a = chain();
+        let dns = a.add_resource(ResourceKind::Dns, "router", 0.0, 0.0);
+        let dr = a.add_resource(ResourceKind::Compute, "api-dr", 0.0, 0.0);
+        a.set_variant(&dns, Some("route53".into())).unwrap();
+        a.set_variant(&dr, Some("ec2-asg".into())).unwrap();
+        a.place(&dr, Some("eu-west-1".into()), None).unwrap();
+        a.connect(&dns, "compute-1").unwrap();
+        a.connect(&dns, &dr).unwrap();
+
+        let p = ProviderProfile::aws();
+        let seed = region_failure_seed(&a, "us-east-1");
+        let r = blast_radius(&a, &p, &seed, Some("us-east-1"), "region us-east-1");
+        // The whole us-east-1 chain is down.
+        assert!(r.down.contains(&"compute-1".to_string()));
+        assert!(r.down.contains(&"database-1".to_string()));
+        assert!(r.down.contains(&"load-balancer-1".to_string()));
+        // The eu-west-1 compute survives; the global DNS stays up but degraded
+        // (it lost one of its two backends and is failing traffic over).
+        assert!(r.healthy.contains(&"compute-2".to_string()));
+        assert!(r.degraded.contains(&"dns-1".to_string()));
+        assert!(!r.down.contains(&"dns-1".to_string()));
+    }
+
+    #[test]
+    fn region_failure_seed_excludes_global_services() {
+        let mut a = Architecture::new();
+        let cdn = a.add_resource(ResourceKind::Cdn, "edge", 0.0, 0.0);
+        a.set_variant(&cdn, Some("cloudfront".into())).unwrap();
+        a.place(&cdn, Some("us-east-1".into()), None).unwrap();
+        assert!(region_failure_seed(&a, "us-east-1").is_empty());
     }
 
     #[test]

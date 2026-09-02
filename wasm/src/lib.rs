@@ -6,7 +6,7 @@
 
 use std::str::FromStr;
 
-use strata_core::analysis::{az_failure_seed, blast_radius, spofs};
+use strata_core::analysis::{az_failure_seed, blast_radius, region_failure_seed, spofs};
 use strata_core::cost::estimate as run_estimate;
 use strata_core::explain::explain as run_explain;
 use strata_core::lint::lint as run_lint;
@@ -124,23 +124,30 @@ impl Studio {
         Ok(())
     }
 
-    /// Simulate the loss of availability zone `az` in `region`. Returns a
-    /// `BlastReport` as JSON.
+    /// Simulate a failure. With `az` set, loses that one availability zone in
+    /// `region`; with `az` empty, loses the whole `region` (everything placed
+    /// there except global services). Returns a `BlastReport` as JSON.
     #[wasm_bindgen(js_name = simulateFailure)]
     pub fn simulate_failure(&self, region: &str, az: &str) -> Result<String, JsError> {
-        if !self.profile.has_az(region, az) {
-            return Err(JsError::new(&format!(
-                "{az} is not an availability zone of {region}"
-            )));
+        if self.profile.region(region).is_none() {
+            return Err(JsError::new(&format!("unknown region: {region}")));
         }
-        let seed = az_failure_seed(&self.inner, az);
-        let report = blast_radius(
-            &self.inner,
-            &self.profile,
-            &seed,
-            Some(region),
-            &format!("AZ {az}"),
-        );
+
+        let (seed, target) = if az.is_empty() {
+            (
+                region_failure_seed(&self.inner, region),
+                format!("region {region}"),
+            )
+        } else {
+            if !self.profile.has_az(region, az) {
+                return Err(JsError::new(&format!(
+                    "{az} is not an availability zone of {region}"
+                )));
+            }
+            (az_failure_seed(&self.inner, az), format!("AZ {az}"))
+        };
+
+        let report = blast_radius(&self.inner, &self.profile, &seed, Some(region), &target);
         Ok(serde_json::to_string(&report).expect("BlastReport always serialises"))
     }
 

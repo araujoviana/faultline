@@ -2,22 +2,30 @@ import type { StudioStore } from "../lib/studio.svelte";
 import type { WebMcpTool } from "../lib/webmcp-bridge";
 
 /**
- * Simulate the loss of one availability zone and report the blast radius. The
- * result also drives the canvas overlay (down = red, degraded = amber).
+ * Simulate a failure and report the blast radius. With `az` set, loses one
+ * availability zone; with `az` omitted, loses the whole region (everything
+ * placed there except global services — a second region and global DNS are what
+ * survive it). The result also drives the canvas overlay (down = red,
+ * degraded = amber).
  */
 export function simulateFailureTool(studio: StudioStore): WebMcpTool {
   return {
     name: "simulate-failure",
-    title: "Simulate an AZ failure",
+    title: "Simulate a zone or region failure",
     description:
-      "Knock out one availability zone and report which resources go down, which degrade, and why.",
+      "Knock out one availability zone (pass az) or a whole region (omit az) and report which " +
+      "resources go down, which degrade, and why.",
     inputSchema: {
       type: "object",
       properties: {
         region: { type: "string", description: 'Region id, e.g. "us-east-1".' },
-        az: { type: "string", description: 'Availability zone to fail, e.g. "us-east-1a".' },
+        az: {
+          type: "string",
+          description:
+            'Availability zone to fail, e.g. "us-east-1a". Omit to fail the entire region.',
+        },
       },
-      required: ["region", "az"],
+      required: ["region"],
       additionalProperties: false,
     },
     // untrustedContentHint: the notes embed resource labels, which are free text
@@ -26,7 +34,8 @@ export function simulateFailureTool(studio: StudioStore): WebMcpTool {
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     async execute(input) {
       const region = String(input.region ?? "");
-      const az = String(input.az ?? "");
+      const az = input.az == null ? "" : String(input.az);
+      const target = az ? `AZ ${az}` : `region ${region}`;
 
       let report: ReturnType<StudioStore["simulateFailure"]>;
       try {
@@ -39,10 +48,10 @@ export function simulateFailureTool(studio: StudioStore): WebMcpTool {
 
       const lines: string[] = [];
       if (report.down.length === 0 && report.degraded.length === 0) {
-        lines.push(`AZ ${az} failure — no impact on the current design.`);
+        lines.push(`${target} failure — no impact on the current design.`);
       } else {
         lines.push(
-          `AZ ${az} failure — ${report.down.length} down` +
+          `${target} failure — ${report.down.length} down` +
             (report.down.length ? ` (${report.down.join(", ")})` : "") +
             `, ${report.degraded.length} degraded` +
             (report.degraded.length ? ` (${report.degraded.join(", ")})` : "") +
