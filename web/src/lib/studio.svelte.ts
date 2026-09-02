@@ -22,6 +22,8 @@ export interface StudioStore {
   readonly spofs: Spof[];
   readonly findings: Finding[];
   readonly explanation: Explanation | null;
+  /** Replace the design with a starting architecture from a requirements sentence (one undo step). */
+  propose(requirements: string): void;
   addResource(kind: string, label: string, x?: number, y?: number): string;
   connect(from: string, to: string): void;
   /** Move a resource to a new canvas position (one undo step). */
@@ -126,6 +128,15 @@ export function createStudio(core: StudioCore): StudioStore {
     },
     get explanation() {
       return explanation;
+    },
+    propose(requirements) {
+      checkpoint();
+      core.propose(requirements);
+      lastReport = null;
+      spofs = [];
+      findings = [];
+      explanation = null;
+      refresh();
     },
     addResource(kind, label, x, y) {
       checkpoint();

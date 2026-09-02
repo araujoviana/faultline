@@ -13,6 +13,7 @@ export async function loadWasmCore(): Promise<StudioCore> {
   await mod.default();
   const studio = new mod.Studio();
   return {
+    propose: (requirements) => studio.propose(requirements),
     addResource: (kind, label, x, y) => studio.addResource(kind, label, x, y),
     connect: (from, to) => studio.connect(from, to),
     move: (id, x, y) => studio.moveResource(id, x, y),

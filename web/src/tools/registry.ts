@@ -7,6 +7,7 @@ import { explainTool } from "./explain";
 import { findSpofsTool } from "./find-spofs";
 import { generateIacTool } from "./generate-iac";
 import { moveResourceTool } from "./move-resource";
+import { proposeArchitectureTool } from "./propose-architecture";
 import { resilienceLintTool } from "./resilience-lint";
 import { simulateFailureTool } from "./simulate-failure";
 
@@ -16,6 +17,7 @@ import { simulateFailureTool } from "./simulate-failure";
  */
 export function buildToolRegistry(studio: StudioStore): WebMcpTool[] {
   return [
+    proposeArchitectureTool(studio),
     addResourceTool(studio),
     connectTool(studio),
     moveResourceTool(studio),

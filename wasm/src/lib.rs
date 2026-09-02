@@ -10,6 +10,7 @@ use strata_core::analysis::{az_failure_seed, blast_radius, spofs};
 use strata_core::explain::explain as run_explain;
 use strata_core::lint::lint as run_lint;
 use strata_core::profile::ProviderProfile;
+use strata_core::propose::propose as run_propose;
 use strata_core::{iac, Architecture, ResourceKind};
 use wasm_bindgen::prelude::*;
 
@@ -34,6 +35,13 @@ impl Studio {
             inner: Architecture::new(),
             profile: ProviderProfile::aws(),
         }
+    }
+
+    /// Replace the whole design with a starting architecture built from a
+    /// free-text requirements sentence (deterministic keyword matching).
+    #[wasm_bindgen(js_name = propose)]
+    pub fn propose(&mut self, requirements: &str) {
+        self.inner = run_propose(requirements);
     }
 
     /// Add a resource; returns its generated id. Errors on an unknown `kind`.

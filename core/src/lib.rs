@@ -19,6 +19,7 @@ pub mod explain;
 pub mod iac;
 pub mod lint;
 pub mod profile;
+pub mod propose;
 
 /// A vendor-neutral cloud building block.
 ///

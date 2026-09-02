@@ -65,6 +65,13 @@ let linking = $state<{ from: string; x: number; y: number } | null>(null);
 let iacEl: HTMLDialogElement | undefined = $state();
 let iacText = $state("");
 
+// ---- propose: build a starting architecture from a requirements sentence ----
+let proposeText = $state("");
+function runPropose() {
+  const req = proposeText.trim();
+  if (req) studio.propose(req);
+}
+
 function selectRegion(id: string, region: string) {
   // Changing region clears the zone (a zone belongs to one region).
   studio.configure(id, "", region, "");
@@ -314,6 +321,19 @@ function runSimulation() {
 
 <div class="layout">
   <aside class="palette">
+    <h2>Propose</h2>
+    <input
+      class="propose-in"
+      type="text"
+      placeholder="a resilient web stack in us-east-1"
+      bind:value={proposeText}
+      onkeydown={(e) => {
+        if (e.key === "Enter") runPropose();
+      }}
+      aria-label="Describe the system to propose"
+    />
+    <button class="primary" disabled={!proposeText.trim()} onclick={runPropose}>Propose</button>
+    <hr />
     <h2>Add</h2>
     <div class="kind-list">
       {#each RESOURCE_KINDS as kind (kind)}
@@ -720,6 +740,9 @@ function runSimulation() {
     text-align: left;
   }
   .palette select {
+    width: 100%;
+  }
+  .palette .propose-in {
     width: 100%;
   }
   .palette hr {

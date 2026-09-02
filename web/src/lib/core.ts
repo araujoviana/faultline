@@ -109,6 +109,8 @@ export interface ProviderProfile {
 }
 
 export interface StudioCore {
+  /** Replace the whole design with a starting architecture from a requirements sentence. */
+  propose(requirements: string): void;
   addResource(kind: string, label: string, x: number, y: number): string;
   connect(from: string, to: string): void;
   /** Move a resource to a new canvas position. */
@@ -159,6 +161,19 @@ export function createMemoryCore(): StudioCore {
   const find = (id: string) => state.resources.find((r) => r.id === id);
 
   return {
+    propose(_requirements) {
+      // The real keyword matching lives in the Rust core; the memory core just
+      // needs to produce a small connected graph for tests / the dev fallback.
+      state = { resources: [], edges: [], counters: {} };
+      this.addResource("load-balancer", "load balancer", 40, 24);
+      this.addResource("compute", "api", 40, 128);
+      this.addResource("database", "primary datastore", 40, 232);
+      this.configure("load-balancer-1", "alb", "us-east-1", "");
+      this.configure("compute-1", "ec2-asg", "us-east-1", "");
+      this.configure("database-1", "rds-multi-az", "us-east-1", "");
+      this.connect("load-balancer-1", "compute-1");
+      this.connect("compute-1", "database-1");
+    },
     addResource(kind, label, x, y) {
       if (!RESOURCE_KINDS.includes(kind as ResourceKind)) {
         throw new Error(`unknown resource kind: ${kind}`);

@@ -10,6 +10,7 @@ import { expect, type Page, test } from "@playwright/test";
  */
 
 const TOOL_NAMES = [
+  "propose-architecture",
   "add-resource",
   "connect",
   "move-resource",
@@ -203,6 +204,27 @@ test("human parity: build, configure, connect, lint and generate IaC from the UI
   const dialog = page.locator("dialog.iac");
   await expect(dialog).toBeVisible();
   await expect(dialog.locator("pre")).toContainText('resource "aws_db_instance" "database_1"');
+});
+
+test("propose-architecture lays down a connected stack the human can adjust", async ({ page }) => {
+  await page.goto("/");
+  await installDriver(page);
+
+  const out = await demo(page, "propose-architecture", {
+    requirements: "read-heavy public web app with background jobs, survive an AZ outage",
+  });
+  expect(out).toContain("Proposed a");
+
+  // Cache + queue tiers were pulled in by the keywords; everything is wired.
+  await expect(page.locator("svg.canvas g.node-group")).toHaveCount(6);
+  await expect(page.locator("svg.canvas path.edge")).toHaveCount(6);
+
+  // A human can immediately do the same from the palette input.
+  await page.locator("aside.palette .propose-in").fill("serverless api with a key-value store");
+  await page.locator("aside.palette").getByRole("button", { name: "Propose" }).click();
+  await expect(
+    page.locator('svg.canvas g.node-group:has(rect[data-kind="api-gateway"])'),
+  ).toHaveCount(1);
 });
 
 test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => {

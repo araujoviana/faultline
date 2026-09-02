@@ -22,6 +22,7 @@ const EMPTY_PROFILE = JSON.stringify({
  */
 export function makeStubCore(overrides: Partial<StudioCore> = {}): StudioCore {
   return {
+    propose: () => {},
     addResource: () => "resource-1",
     connect: () => {},
     move: () => {},
