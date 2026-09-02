@@ -1,6 +1,7 @@
 import type {
   ArchitectureState,
   BlastReport,
+  CostReport,
   Explanation,
   Finding,
   ProviderProfile,
@@ -22,6 +23,9 @@ export interface StudioStore {
   readonly spofs: Spof[];
   readonly findings: Finding[];
   readonly explanation: Explanation | null;
+  readonly cost: CostReport | null;
+  /** Change in total monthly cost since the previous estimate, or null if this is the first. */
+  readonly costDelta: number | null;
   /** Replace the design with a starting architecture from a requirements sentence (one undo step). */
   propose(requirements: string): void;
   addResource(kind: string, label: string, x?: number, y?: number): string;
@@ -36,6 +40,8 @@ export interface StudioStore {
   lint(): Finding[];
   /** Explain one resource id, or an edge written `"from->to"`. Read-only view, not an undo step. */
   explain(selection: string): Explanation;
+  /** Rough monthly cost estimate. Read-only view; keeps the previous total so {@link costDelta} works. */
+  estimateCost(): CostReport;
   /** Emit the architecture as infrastructure-as-code. Read-only: no mutation, no undo step. */
   generateIac(target?: string): string;
   clearAnalysis(): void;
@@ -86,6 +92,8 @@ export function createStudio(core: StudioCore): StudioStore {
   let spofs = $state<Spof[]>([]);
   let findings = $state<Finding[]>([]);
   let explanation = $state<Explanation | null>(null);
+  let cost = $state<CostReport | null>(null);
+  let costDelta = $state<number | null>(null);
 
   let profile: ProviderProfile = EMPTY_PROFILE;
   try {
@@ -129,6 +137,12 @@ export function createStudio(core: StudioCore): StudioStore {
     get explanation() {
       return explanation;
     },
+    get cost() {
+      return cost;
+    },
+    get costDelta() {
+      return costDelta;
+    },
     propose(requirements) {
       checkpoint();
       core.propose(requirements);
@@ -136,6 +150,8 @@ export function createStudio(core: StudioCore): StudioStore {
       spofs = [];
       findings = [];
       explanation = null;
+      cost = null;
+      costDelta = null;
       refresh();
     },
     addResource(kind, label, x, y) {
@@ -185,6 +201,14 @@ export function createStudio(core: StudioCore): StudioStore {
       explanation = result;
       return result;
     },
+    estimateCost() {
+      const next = JSON.parse(core.estimateCost()) as CostReport;
+      costDelta = cost
+        ? Math.round((next.total_monthly_usd - cost.total_monthly_usd) * 100) / 100
+        : null;
+      cost = next;
+      return next;
+    },
     generateIac(target = "terraform") {
       return core.generateIac(target);
     },
@@ -193,6 +217,8 @@ export function createStudio(core: StudioCore): StudioStore {
       spofs = [];
       findings = [];
       explanation = null;
+      cost = null;
+      costDelta = null;
     },
     reset() {
       checkpoint();
@@ -201,6 +227,8 @@ export function createStudio(core: StudioCore): StudioStore {
       spofs = [];
       findings = [];
       explanation = null;
+      cost = null;
+      costDelta = null;
       refresh();
     },
     undo() {
@@ -211,6 +239,8 @@ export function createStudio(core: StudioCore): StudioStore {
       spofs = [];
       findings = [];
       explanation = null;
+      cost = null;
+      costDelta = null;
       refresh();
     },
   };

@@ -6,24 +6,57 @@
     { "id": "eu-west-1", "azs": ["eu-west-1a", "eu-west-1b", "eu-west-1c"] }
   ],
   "variants": {
-    "compute": [{ "id": "ec2-asg", "display_name": "EC2 + Auto Scaling Group" }],
+    "compute": [
+      { "id": "ec2-asg", "display_name": "EC2 + Auto Scaling Group", "monthly_usd": 62 },
+      { "id": "fargate", "display_name": "ECS on Fargate", "monthly_usd": 48 }
+    ],
     "database": [
-      { "id": "rds-single-az", "display_name": "RDS (Single-AZ)", "spof": true },
-      { "id": "rds-multi-az", "display_name": "RDS (Multi-AZ)", "failover_seconds": 90 },
-      { "id": "aurora", "display_name": "Aurora", "failover_seconds": 30 },
-      { "id": "dynamodb", "display_name": "DynamoDB" }
+      { "id": "rds-single-az", "display_name": "RDS (Single-AZ)", "spof": true, "monthly_usd": 78 },
+      {
+        "id": "rds-multi-az",
+        "display_name": "RDS (Multi-AZ)",
+        "failover_seconds": 90,
+        "monthly_usd": 156
+      },
+      { "id": "aurora", "display_name": "Aurora", "failover_seconds": 30, "monthly_usd": 205 },
+      {
+        "id": "aurora-serverless",
+        "display_name": "Aurora Serverless v2",
+        "failover_seconds": 30,
+        "monthly_usd": 92
+      },
+      { "id": "dynamodb", "display_name": "DynamoDB", "monthly_usd": 28 }
     ],
-    "load-balancer": [{ "id": "alb", "display_name": "Application Load Balancer" }],
-    "object-store": [{ "id": "s3", "display_name": "Amazon S3" }],
+    "load-balancer": [
+      { "id": "alb", "display_name": "Application Load Balancer", "monthly_usd": 23 },
+      { "id": "nlb", "display_name": "Network Load Balancer", "monthly_usd": 23 }
+    ],
+    "object-store": [{ "id": "s3", "display_name": "Amazon S3", "monthly_usd": 24 }],
     "cache": [
-      { "id": "elasticache", "display_name": "ElastiCache (Multi-AZ)", "failover_seconds": 60 }
+      {
+        "id": "elasticache",
+        "display_name": "ElastiCache (Multi-AZ)",
+        "failover_seconds": 60,
+        "monthly_usd": 52
+      },
+      {
+        "id": "elasticache-single",
+        "display_name": "ElastiCache (Single-node)",
+        "spof": true,
+        "monthly_usd": 24
+      }
     ],
-    "queue": [{ "id": "sqs", "display_name": "Amazon SQS" }],
-    "cdn": [{ "id": "cloudfront", "display_name": "Amazon CloudFront" }],
+    "queue": [{ "id": "sqs", "display_name": "Amazon SQS", "monthly_usd": 6 }],
+    "cdn": [{ "id": "cloudfront", "display_name": "Amazon CloudFront", "monthly_usd": 42 }],
     "dns": [
-      { "id": "route53", "display_name": "Route 53 (health-checked)", "failover_seconds": 60 }
+      {
+        "id": "route53",
+        "display_name": "Route 53 (health-checked)",
+        "failover_seconds": 60,
+        "monthly_usd": 3
+      }
     ],
-    "functions": [{ "id": "lambda", "display_name": "AWS Lambda" }],
-    "api-gateway": [{ "id": "apigw-http", "display_name": "API Gateway (HTTP)" }]
+    "functions": [{ "id": "lambda", "display_name": "AWS Lambda", "monthly_usd": 16 }],
+    "api-gateway": [{ "id": "apigw-http", "display_name": "API Gateway (HTTP)", "monthly_usd": 11 }]
   }
 }

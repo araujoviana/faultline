@@ -354,6 +354,7 @@ function runSimulation() {
     <h2>Analyze</h2>
     <button onclick={() => studio.findSpofs()}>Scan for SPOFs</button>
     <button onclick={() => studio.lint()}>Resilience lint</button>
+    <button onclick={() => studio.estimateCost()}>Estimate cost</button>
     <button onclick={openIac}>Generate Terraform</button>
 
     {#if selectedNode}
@@ -453,6 +454,32 @@ function runSimulation() {
             </li>
           {/each}
         </ul>
+      </div>
+    {/if}
+
+    {#if studio.cost}
+      {@const c = studio.cost}
+      <div class="cost-panel" role="status">
+        <div class="findings-head">
+          <strong>
+            ~${c.total_monthly_usd.toFixed(2)}/month
+            {#if studio.costDelta !== null && studio.costDelta !== 0}
+              <span class="cost-delta" data-dir={studio.costDelta > 0 ? "up" : "down"}>
+                {studio.costDelta > 0 ? "+" : "−"}${Math.abs(studio.costDelta).toFixed(2)}/mo
+              </span>
+            {/if}
+          </strong>
+          <button class="ghost" onclick={() => studio.clearAnalysis()}>Clear</button>
+        </div>
+        <ul>
+          {#each c.lines as l (l.resource)}
+            <li><span>{l.resource}</span> {l.variant} <em>${l.monthly_usd.toFixed(2)}/mo</em></li>
+          {/each}
+        </ul>
+        {#if c.unpriced.length}
+          <p class="cost-unpriced">Unpriced: {c.unpriced.join(", ")}</p>
+        {/if}
+        <p class="cost-note">Illustrative bundled snapshot — not a live quote.</p>
       </div>
     {/if}
 
@@ -1100,6 +1127,58 @@ function runSimulation() {
     color: var(--muted);
     font-family: var(--font-mono, ui-monospace);
     font-size: 0.72rem;
+  }
+
+  .cost-panel {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--text-sm);
+    background: var(--bg-sunken);
+    max-height: 30vh;
+    overflow-y: auto;
+  }
+  .cost-panel .cost-delta {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    margin-left: 0.4rem;
+  }
+  .cost-panel .cost-delta[data-dir="up"] {
+    color: var(--status-down);
+  }
+  .cost-panel .cost-delta[data-dir="down"] {
+    color: var(--k-cdn);
+  }
+  .cost-panel ul {
+    list-style: none;
+    margin: 0.35rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    font-size: var(--text-xs);
+  }
+  .cost-panel li span {
+    font-family: var(--font-mono);
+    color: var(--muted);
+    margin-right: 0.4rem;
+  }
+  .cost-panel li em {
+    font-style: normal;
+    font-family: var(--font-mono);
+    float: right;
+  }
+  .cost-panel .cost-unpriced {
+    margin: 0.3rem 0 0;
+    font-size: var(--text-xs);
+    color: var(--status-degraded);
+  }
+  .cost-panel .cost-note {
+    margin: 0.3rem 0 0;
+    font-size: 0.68rem;
+    color: var(--muted);
   }
 
   .explain-panel {

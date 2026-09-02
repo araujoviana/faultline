@@ -24,6 +24,7 @@ export async function loadWasmCore(): Promise<StudioCore> {
     findSpofs: () => studio.findSpofs(),
     lint: () => studio.lint(),
     explain: (selection) => studio.explain(selection),
+    estimateCost: () => studio.estimateCost(),
     generateIac: (target) => studio.generateIac(target),
     profileJson: () => studio.profileJson(),
     stateJson: () => studio.stateJson(),

@@ -3,6 +3,7 @@ import type { WebMcpTool } from "../lib/webmcp-bridge";
 import { addResourceTool } from "./add-resource";
 import { configureResourceTool } from "./configure-resource";
 import { connectTool } from "./connect";
+import { estimateCostTool } from "./estimate-cost";
 import { explainTool } from "./explain";
 import { findSpofsTool } from "./find-spofs";
 import { generateIacTool } from "./generate-iac";
@@ -26,6 +27,7 @@ export function buildToolRegistry(studio: StudioStore): WebMcpTool[] {
     findSpofsTool(studio),
     resilienceLintTool(studio),
     explainTool(studio),
+    estimateCostTool(studio),
     generateIacTool(studio),
   ];
 }

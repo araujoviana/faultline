@@ -8,6 +8,7 @@ const EMPTY_REPORT = JSON.stringify({
   healthy: [],
   notes: [],
 });
+const EMPTY_COST = JSON.stringify({ total_monthly_usd: 0, lines: [], unpriced: [] });
 const EMPTY_PROFILE = JSON.stringify({
   provider: "",
   display_name: "",
@@ -41,6 +42,7 @@ export function makeStubCore(overrides: Partial<StudioCore> = {}): StudioCore {
         takes_down: [],
         notes: [],
       }),
+    estimateCost: () => EMPTY_COST,
     generateIac: () => "# stub",
     profileJson: () => EMPTY_PROFILE,
     stateJson: () => EMPTY_STATE,

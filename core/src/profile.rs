@@ -45,6 +45,11 @@ pub struct Variant {
     /// long that failover typically takes.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub failover_seconds: Option<u32>,
+    /// Illustrative on-demand list price per month, in USD, for a modest
+    /// production-shaped deployment. A bundled snapshot, not a live quote;
+    /// `None` means this variant is not priced in the profile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub monthly_usd: Option<f64>,
 }
 
 impl ProviderProfile {

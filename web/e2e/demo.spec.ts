@@ -11,6 +11,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 const TOOL_NAMES = [
   "propose-architecture",
+  "estimate-cost",
   "add-resource",
   "connect",
   "move-resource",
@@ -298,6 +299,11 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
   expect(why).toContain("takes down");
   await expect(page.locator(".explain-panel")).toContainText("orders");
 
+  // estimate-cost -> a dollar figure for the current (cheap, single-AZ) design.
+  const cost1 = await demo(page, "estimate-cost", {});
+  expect(cost1).toContain("/month");
+  await expect(page.locator(".cost-panel")).toContainText("/month");
+
   // Harden -> Multi-AZ, then re-simulate: DB degrades (~90s), compute + LB healthy.
   await demo(page, "configure-resource", {
     id: "database-1",
@@ -308,6 +314,11 @@ test("cold-open demo: build, simulate, find SPOFs, harden", async ({ page }) => 
   // The high-severity finding clears once the datastore is Multi-AZ.
   const lint2 = await demo(page, "resilience-lint", {});
   expect(lint2).not.toContain("single-az-datastore");
+
+  // estimate-cost again -> the agent shows the cost delta of the harden decision.
+  const cost2 = await demo(page, "estimate-cost", {});
+  expect(cost2).toMatch(/\+\$\d/);
+  await expect(page.locator(".cost-panel .cost-delta")).toContainText("+$");
   const failover = await demo(page, "simulate-failure", { region: "us-east-1", az: "us-east-1a" });
   expect(failover).toContain("~90s");
   await expect(

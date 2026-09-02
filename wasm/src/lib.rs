@@ -7,6 +7,7 @@
 use std::str::FromStr;
 
 use strata_core::analysis::{az_failure_seed, blast_radius, spofs};
+use strata_core::cost::estimate as run_estimate;
 use strata_core::explain::explain as run_explain;
 use strata_core::lint::lint as run_lint;
 use strata_core::profile::ProviderProfile;
@@ -157,6 +158,14 @@ impl Studio {
     pub fn lint(&self) -> String {
         let found = run_lint(&self.inner, &self.profile);
         serde_json::to_string(&found).expect("Finding list always serialises")
+    }
+
+    /// Rough monthly cost estimate for the current design, as a JSON
+    /// `CostReport`. Read-only; a bundled-snapshot figure, not a live quote.
+    #[wasm_bindgen(js_name = estimateCost)]
+    pub fn estimate_cost(&self) -> String {
+        let report = run_estimate(&self.inner, &self.profile);
+        serde_json::to_string(&report).expect("CostReport always serialises")
     }
 
     /// Explain one selection — a resource id, or an edge written `"from->to"`.

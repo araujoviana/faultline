@@ -98,6 +98,22 @@ export interface ProfileVariant {
   display_name: string;
   spof?: boolean;
   failover_seconds?: number;
+  monthly_usd?: number;
+}
+
+/** One resource's monthly cost contribution (mirrors `cost::CostLine`). */
+export interface CostLine {
+  resource: string;
+  label: string;
+  variant: string;
+  monthly_usd: number;
+}
+
+/** Whole-design monthly cost estimate (mirrors `cost::CostReport`). */
+export interface CostReport {
+  total_monthly_usd: number;
+  lines: CostLine[];
+  unpriced: string[];
 }
 
 /** The active provider profile (mirrors `profile::ProviderProfile`). */
@@ -126,6 +142,8 @@ export interface StudioCore {
   lint(): string;
   /** Explain one resource id, or an edge written `"from->to"`; returns a JSON {@link Explanation}. Read-only. */
   explain(selection: string): string;
+  /** Rough monthly cost estimate; returns a JSON {@link CostReport}. Read-only. */
+  estimateCost(): string;
   /** Emit the architecture as infrastructure-as-code (read-only). Throws on an unknown target. */
   generateIac(target: string): string;
   /** The active provider profile as JSON. */
@@ -229,6 +247,11 @@ export function createMemoryCore(): StudioCore {
         takes_down: [],
         notes: [],
       });
+    },
+    estimateCost() {
+      // Real pricing lives in the Rust core + bundled profile; the memory core
+      // has no price data, so it reports an empty estimate.
+      return JSON.stringify({ total_monthly_usd: 0, lines: [], unpriced: [] });
     },
     generateIac(target) {
       if (target && target !== "terraform") {
