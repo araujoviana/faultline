@@ -7,6 +7,7 @@ declare module "*/wasm/strata_wasm.js" {
   export default function init(input?: unknown): Promise<unknown>;
   export class Studio {
     constructor();
+    propose(requirements: string): void;
     addResource(kind: string, label: string, x: number, y: number): string;
     connect(from: string, to: string): void;
     moveResource(id: string, x: number, y: number): void;
@@ -15,6 +16,9 @@ declare module "*/wasm/strata_wasm.js" {
     simulateFailure(region: string, az: string): string;
     findSpofs(): string;
     lint(): string;
+    resilienceScore(): string;
+    explain(selection: string): string;
+    estimateCost(): string;
     generateIac(target: string): string;
     profileJson(): string;
     stateJson(): string;
