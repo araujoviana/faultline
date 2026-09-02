@@ -300,6 +300,12 @@ function runSimulation() {
         >
           <path d="M0 0 L10 5 L0 10 z" class="edge-head" />
         </marker>
+        <!-- Clips the node's title + variant text to the card's right edge so a
+             long provider name ("Application Load Balancer") can't spill out.
+             userSpaceOnUse → the rect is read in each node's local space. -->
+        <clipPath id="node-text-clip" clipPathUnits="userSpaceOnUse">
+          <rect x="36" y="8" width={NODE_W - 42} height="32" />
+        </clipPath>
         <pattern
           id="canvas-grid"
           width="24"
@@ -371,8 +377,10 @@ function runSimulation() {
             {@render glyph(node.kind)}
           </g>
 
-          <text class="label" x="38" y="22">{node.label}</text>
-          <text class="variant" x="38" y="34">{variantName(node) || node.kind}</text>
+          <g class="node-text" clip-path="url(#node-text-clip)">
+            <text class="label" x="37" y="22"><title>{node.label}</title>{node.label}</text>
+            <text class="variant" x="37" y="34"><title>{variantName(node) || node.kind}</title>{variantName(node) || node.kind}</text>
+          </g>
           <text class="badge" x="10" y={NODE_H - 8}>{placementBadge(node)}</text>
         </g>
       {/each}
@@ -414,22 +422,22 @@ function runSimulation() {
     display: grid;
     grid-template-columns: 11rem minmax(0, 1fr) 19rem;
     grid-template-areas: "palette stage activity";
-    gap: 1rem;
+    gap: var(--space-4);
     align-items: start;
   }
   .palette {
     grid-area: palette;
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: var(--space-2);
     position: sticky;
-    top: 1rem;
+    top: var(--space-4);
   }
   .stage {
     grid-area: stage;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: var(--space-2);
     min-width: 0;
   }
   .activity-col {
@@ -477,11 +485,11 @@ function runSimulation() {
   }
 
   .palette h2 {
-    font-size: 0.7rem;
+    font-size: var(--text-2xs);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.09em;
     color: var(--muted);
-    margin: 0 0 0.2rem;
+    margin: 0 0 var(--space-1);
   }
   .palette button {
     text-align: left;
@@ -492,7 +500,7 @@ function runSimulation() {
   .palette hr {
     border: none;
     border-top: 1px solid var(--line);
-    margin: 0.4rem 0;
+    margin: var(--space-2) 0;
     width: 100%;
   }
   /* The Add list scrolls inside itself so a long catalogue never pushes
@@ -500,23 +508,28 @@ function runSimulation() {
   .kind-list {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: var(--space-1);
     max-height: 26rem;
     overflow-y: auto;
   }
   .stage-tools {
     display: flex;
-    gap: 0.4rem;
+    gap: var(--space-2);
     justify-content: flex-end;
   }
   .banner {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.4rem 0.75rem;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    font-size: 0.85rem;
+    gap: var(--space-3);
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--line-strong);
+    border-left: 3px solid var(--status-down);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    background: var(--bg-sunken);
+  }
+  .banner strong {
+    font-weight: 600;
   }
   .banner button {
     margin-left: auto;
@@ -528,8 +541,8 @@ function runSimulation() {
     display: block;
     width: 100%;
     height: clamp(20rem, 62vh, 44rem);
-    border: 1px solid var(--line);
-    border-radius: 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
     background: var(--bg);
     cursor: grab;
     touch-action: none;
@@ -539,20 +552,26 @@ function runSimulation() {
     cursor: grabbing;
   }
   .grid-dot {
-    fill: var(--line);
+    fill: var(--line-strong);
   }
 
   .view-tools {
     position: absolute;
-    right: 0.6rem;
-    bottom: 0.6rem;
+    right: var(--space-2);
+    bottom: var(--space-2);
     display: flex;
-    gap: 0.25rem;
+    gap: 2px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 2px;
   }
   .view-tools button {
-    padding: 0.2rem 0.5rem;
+    padding: 0.15rem 0.5rem;
     min-width: 2rem;
-    background: var(--bg);
+    border-color: transparent;
+    background: transparent;
+    font-variant-numeric: tabular-nums;
     line-height: 1.2;
   }
 
@@ -561,16 +580,18 @@ function runSimulation() {
     fill: none;
     stroke: var(--edge);
     stroke-width: 1.5;
-    opacity: 0.8;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    opacity: 0.85;
   }
   .edge.dim {
-    opacity: 0.3;
+    opacity: 0.28;
   }
   .edge-head {
     fill: var(--edge);
   }
 
-  /* ---- Strata node ---- */
+  /* ---- Strata node: a card built up in sediment layers ---- */
   .node-group {
     cursor: grab;
     touch-action: none;
@@ -584,8 +605,9 @@ function runSimulation() {
   }
   .node {
     fill: var(--node-fill);
-    stroke: var(--line);
+    stroke: var(--line-strong);
     stroke-width: 1;
+    transition: fill var(--dur) var(--ease);
   }
   .node-group[data-status="down"] .node {
     fill: var(--status-down-bg);
@@ -597,11 +619,13 @@ function runSimulation() {
   .strata-line {
     stroke: var(--kc);
     stroke-width: 1;
-    opacity: 0.13;
+    opacity: 0.1;
   }
 
+  /* Left spine — the status "second channel" so red/amber isn't the only cue. */
   .spine {
     fill: var(--node-stroke);
+    transition: fill var(--dur) var(--ease);
   }
   .node-group[data-status="down"] .spine {
     fill: var(--status-down);
@@ -612,14 +636,15 @@ function runSimulation() {
 
   .chip {
     fill: var(--kc);
-    opacity: 0.16;
+    opacity: 0.15;
   }
   .glyph {
     fill: none;
     stroke: var(--kc);
-    stroke-width: 1.35;
+    stroke-width: 1.4;
     stroke-linecap: round;
     stroke-linejoin: round;
+    transition: stroke var(--dur) var(--ease);
   }
   .node-group[data-status="down"] .glyph {
     stroke: var(--status-down);
@@ -628,10 +653,10 @@ function runSimulation() {
     stroke: var(--status-degraded);
   }
 
-  /* SPOF: the card throws an offset, sheared duplicate — a slip. */
+  /* SPOF: the card throws an offset, sheared duplicate — a fault slip. */
   .spof-ring {
     fill: var(--spof);
-    opacity: 0.16;
+    opacity: 0.18;
   }
 
   .label {
@@ -649,8 +674,9 @@ function runSimulation() {
     text-anchor: start;
     font-size: 7.5px;
     fill: var(--muted);
+    font-family: var(--font-mono);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
 
   .empty-title {
@@ -663,26 +689,26 @@ function runSimulation() {
     font-size: 11.5px;
   }
   .empty-hint {
-    fill: var(--muted);
+    fill: var(--accent-strong);
     font-size: 10.5px;
-    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-family: var(--font-mono);
   }
 
   .legend {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    font-size: 0.75rem;
+    gap: 0.35rem;
+    font-size: var(--text-xs);
     color: var(--muted);
   }
   .legend .swatch {
-    width: 0.8rem;
-    height: 0.8rem;
+    width: 0.75rem;
+    height: 0.75rem;
     border-radius: 3px;
     display: inline-block;
   }
   .legend .swatch:not(:first-child) {
-    margin-left: 0.75rem;
+    margin-left: var(--space-3);
   }
   .swatch.down {
     background: var(--status-down-bg);
@@ -694,6 +720,14 @@ function runSimulation() {
   }
   .swatch.spof {
     background: var(--spof);
-    opacity: 0.35;
+    opacity: 0.4;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .node,
+    .spine,
+    .glyph {
+      transition: none;
+    }
   }
 </style>
