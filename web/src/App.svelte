@@ -40,8 +40,8 @@ onMount(() => {
 <header>
   <span class="brand">
     <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
-      <path d="M0 0 H19 V9 H14 V19 H20 V30 H15 V32 H0 Z" fill="#8b5cf6" />
-      <path d="M21 0 H32 V32 H17 V30 H22 V19 H16 V9 H21 Z" fill="#6d28d9" />
+      <path class="mark-a" d="M0 0 H19 V9 H14 V19 H20 V30 H15 V32 H0 Z" />
+      <path class="mark-b" d="M21 0 H32 V32 H17 V30 H22 V19 H16 V9 H21 Z" />
     </svg>
     Faultline
   </span>
@@ -85,34 +85,47 @@ onMount(() => {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 0.5rem 1.5rem;
-    padding: 0.75rem clamp(0.9rem, 3vw, 1.25rem);
+    gap: var(--space-2) var(--space-5);
+    padding: var(--space-3) clamp(0.9rem, 3vw, 1.25rem);
     border-bottom: 1px solid var(--line);
   }
   .brand {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
+    font-weight: 650;
+    font-size: var(--text-md);
+    letter-spacing: -0.01em;
   }
   .mark {
-    width: 1.1em;
-    height: 1.1em;
-    border-radius: 4px;
+    width: 1.15em;
+    height: 1.15em;
+  }
+  .mark-a {
+    fill: var(--accent);
+  }
+  .mark-b {
+    fill: var(--accent-strong);
   }
   nav {
     display: flex;
-    gap: 1rem;
+    gap: var(--space-4);
     margin-left: auto;
+    font-size: var(--text-sm);
   }
   nav a {
     color: var(--muted);
     text-decoration: none;
+    padding-bottom: 2px;
+    transition: color var(--dur) var(--ease);
+  }
+  nav a:hover {
+    color: var(--fg);
   }
   nav a[aria-current="page"] {
     color: var(--fg);
     font-weight: 600;
+    box-shadow: inset 0 -2px var(--accent);
   }
   main {
     width: 100%;
@@ -123,13 +136,13 @@ onMount(() => {
   footer {
     max-width: 1600px;
     margin-inline: auto;
-    padding: 1rem clamp(0.9rem, 3vw, 1.25rem) 2rem;
+    padding: var(--space-4) clamp(0.9rem, 3vw, 1.25rem) var(--space-6);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 0.5rem 1rem;
-    font-size: 0.8rem;
+    gap: var(--space-2) var(--space-4);
+    font-size: var(--text-xs);
     color: var(--muted);
   }
   footer a {
@@ -138,8 +151,16 @@ onMount(() => {
     gap: 0.4rem;
     color: var(--muted);
     text-decoration: none;
+    transition: color var(--dur) var(--ease);
   }
   footer a:hover {
     color: var(--fg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    nav a,
+    footer a {
+      transition: none;
+    }
   }
 </style>

@@ -172,8 +172,9 @@ test("human parity: build, configure, connect, lint and generate IaC from the UI
   await inspector.locator("select").nth(0).selectOption("rds-single-az"); // Variant
   await inspector.locator("select").nth(1).selectOption("us-east-1"); // Region
   await inspector.locator("select").nth(2).selectOption("us-east-1a"); // Zone (appears after region)
-  await expect(db.locator("text.variant")).toHaveText("RDS (Single-AZ)");
-  await expect(db.locator("text.badge")).toHaveText("us-east-1a");
+  // the <text> carries a <title> child (full string on hover), so match loosely
+  await expect(db.locator("text.variant")).toContainText("RDS (Single-AZ)");
+  await expect(db.locator("text.badge")).toContainText("us-east-1a");
 
   // 3. Connect nodes by dragging each node's port onto the next.
   async function link(fromId: string, toId: string) {

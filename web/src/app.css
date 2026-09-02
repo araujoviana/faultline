@@ -1,70 +1,122 @@
 :root {
+  /* ---- Surfaces & ink ---------------------------------------------------- */
   --bg: #ffffff;
+  --bg-sunken: #f6f6f8;
   --fg: #1a1a1f;
-  --muted: #6b6b76;
-  --line: #e3e3e8;
-  --code-bg: #f5f5f7;
+  --muted: #63636e;
+  --line: #e1e1e7;
+  --line-strong: #cfcfd8;
+  --code-bg: #f3f3f6;
   --node-fill: #fbfbfd;
   --node-stroke: #9aa0b4;
 
-  /* Canvas — dependency edges */
+  /* ---- Brand ----------------------------------------------------------------
+     Faultline's violet — the "energy along the fault". One hue, used sparingly:
+     the mark, the focus ring, the primary action, the active nav. */
+  --accent: #8b5cf6;
+  --accent-strong: #6d28d9;
+  --accent-ink: #ffffff;
+  --accent-wash: #efe9fe;
+
+  /* ---- Canvas: dependency edges ---------------------------------------- */
   --edge: #8b8b96;
 
-  /* Canvas — failure-analysis status (colour is always paired with a second
-     channel: the node's spine, a glyph swap, or the SPOF slip-shadow). */
+  /* ---- Canvas: failure-analysis status --------------------------------------
+     Colour is always paired with a second channel (the node's spine, a glyph
+     swap, the SPOF slip-shadow) so it survives red-green colour blindness. */
   --status-down: #b93b2e;
-  --status-down-bg: #f8dcdb;
-  --status-degraded: #9a6410;
-  --status-degraded-bg: #f6ead0;
+  --status-down-bg: #f7dbda;
+  --status-degraded: #8f5d0c;
+  --status-degraded-bg: #f5e8cf;
   --spof: #b93b2e;
 
-  /* Canvas — per-kind accent (vendor-neutral). Used for the glyph chip,
-     the strata layer lines, and the healthy glyph stroke. */
-  --k-compute: #6b7280;
+  /* ---- Canvas: per-kind accent (vendor-neutral) ---------------------------
+     The glyph chip, the strata layer lines, the healthy glyph stroke. */
+  --k-compute: #5b6270;
   --k-database: #7c5cff;
-  --k-queue: #cf7a1e;
-  --k-load-balancer: #12908f;
-  --k-object-store: #3d7fd0;
-  --k-cache: #cf4372;
-  --k-cdn: #2f8f5b;
-  --k-dns: #8a6d1e;
-  --k-functions: #c2571e;
-  --k-api-gateway: #6d5bd0;
+  --k-queue: #c06a12;
+  --k-load-balancer: #0f8f8d;
+  --k-object-store: #3577c8;
+  --k-cache: #c53c6c;
+  --k-cdn: #2c8a56;
+  --k-dns: #a06714;
+  --k-functions: #bd4f1a;
+  --k-api-gateway: #6a54c9;
+
+  /* ---- Type -----------------------------------------------------------------
+     Two voices, used deliberately: system-ui for anything a person writes or
+     reads (prose, labels, headings); ui-monospace for anything a machine
+     emits (resource ids, tool names, regions, schema, tool output). */
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.78rem;
+  --text-sm: 0.875rem;
+  --text-base: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.375rem;
+
+  /* ---- Space & shape --------------------------------------------------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+
+  --radius-sm: 6px;
+  --radius-md: 9px;
+  --radius-lg: 13px;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur: 140ms;
 
   color-scheme: light dark;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
   color: var(--fg);
   background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #131318;
+    --bg: #121216;
+    --bg-sunken: #191920;
     --fg: #ececf1;
-    --muted: #9a9aa6;
-    --line: #2c2c34;
-    --code-bg: #1c1c22;
-    --node-fill: #1b1b21;
+    --muted: #9d9daa;
+    --line: #2a2a32;
+    --line-strong: #3a3a45;
+    --code-bg: #1b1b22;
+    --node-fill: #1c1c23;
     --node-stroke: #4a4a58;
 
-    --edge: #8b8996;
+    --accent: #9d84ff;
+    --accent-strong: #8b6dff;
+    --accent-ink: #17131f;
+    --accent-wash: #221c3a;
 
-    --status-down: #e88c82;
-    --status-down-bg: #3a1f20;
-    --status-degraded: #d7a662;
-    --status-degraded-bg: #362a16;
-    --spof: #e88c82;
+    --edge: #85838f;
 
-    --k-compute: #9aa0b4;
-    --k-database: #9d84ff;
-    --k-queue: #e09347;
-    --k-load-balancer: #37b3b2;
-    --k-object-store: #5f9ae4;
-    --k-cache: #e2699a;
-    --k-cdn: #56c98a;
-    --k-dns: #d9b25e;
-    --k-functions: #e88a52;
-    --k-api-gateway: #9d8bec;
+    --status-down: #ec8f85;
+    --status-down-bg: #3b1f20;
+    --status-degraded: #dcaa64;
+    --status-degraded-bg: #382b17;
+    --spof: #ec8f85;
+
+    --k-compute: #99a0b2;
+    --k-database: #a48cff;
+    --k-queue: #e0954a;
+    --k-load-balancer: #3bb6b4;
+    --k-object-store: #64a0e8;
+    --k-cache: #e56e9d;
+    --k-cdn: #58cb8c;
+    --k-dns: #dcb562;
+    --k-functions: #ec8f57;
+    --k-api-gateway: #a290ee;
   }
 }
 
@@ -75,39 +127,113 @@
 body {
   margin: 0;
   min-height: 100vh;
+  background: var(--bg);
+}
+
+::selection {
+  background: var(--accent-wash);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.25;
+  letter-spacing: -0.011em;
+}
+
+/* ---- Controls ---------------------------------------------------------------
+   One button, three intents: default (quiet), .primary (the main action in a
+   region), .ghost (borderless). Selects match the default button. */
+button,
+select,
+input {
+  font: inherit;
+  color: var(--fg);
+  background: var(--code-bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.65rem;
+  transition:
+    border-color var(--dur) var(--ease),
+    background var(--dur) var(--ease),
+    color var(--dur) var(--ease);
 }
 
 button,
 select {
-  font: inherit;
-  color: var(--fg);
-  background: var(--code-bg);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.35rem 0.6rem;
   cursor: pointer;
 }
 
+button {
+  font-size: var(--text-sm);
+}
+
 button:hover:not(:disabled),
-select:hover {
+select:hover,
+input:hover {
   border-color: var(--node-stroke);
 }
 
+button:active:not(:disabled) {
+  background: var(--bg-sunken);
+}
+
 button:disabled {
-  opacity: 0.45;
+  opacity: 0.42;
   cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+button.primary:active:not(:disabled) {
+  background: var(--accent-strong);
 }
 
 button.ghost {
   background: transparent;
+  border-color: transparent;
 }
 
-:where(a, button, select, [tabindex]):focus-visible {
-  outline: 2px solid #8b5cf6;
+button.ghost:hover:not(:disabled) {
+  background: var(--code-bg);
+  border-color: var(--line);
+}
+
+:where(a, button, select, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
-code {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+a {
+  color: var(--accent-strong);
+  text-underline-offset: 2px;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+}
+
+/* Hover/focus fades are user-initiated and instantaneous-feeling. The canvas
+   state transitions (a failure cascade recolouring nodes) are the ones worth
+   holding still for — gated in Canvas.svelte alongside the component styles. */
+@media (prefers-reduced-motion: reduce) {
+  button,
+  select,
+  input {
+    transition: none;
+  }
 }
