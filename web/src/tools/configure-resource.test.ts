@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { clearActivity } from "../lib/activity.svelte";
 import { createMemoryCore } from "../lib/core";
+import { makeStubCore } from "../lib/stub-core";
 import { createStudio } from "../lib/studio.svelte";
 import { instrumentTool } from "../lib/webmcp-bridge";
 import { configureResourceTool } from "./configure-resource";
@@ -48,6 +49,34 @@ describe("configure-resource tool", () => {
     const { tool } = setup();
     const result = await tool.execute({ id: "ghost-1", variant: "rds-multi-az" });
     expect(result.content[0].text).toContain("ghost-1");
+  });
+
+  it("lists the valid variants when the requested one is unknown", async () => {
+    const core = makeStubCore({
+      configure: () => {
+        throw new Error("unknown database variant for Amazon Web Services: postgres");
+      },
+      stateJson: () =>
+        JSON.stringify({
+          resources: [{ id: "database-1", kind: "database", label: "d", x: 0, y: 0 }],
+          edges: [],
+        }),
+      profileJson: () =>
+        JSON.stringify({
+          provider: "aws",
+          display_name: "AWS",
+          regions: [],
+          variants: {
+            database: [
+              { id: "rds-multi-az", display_name: "RDS" },
+              { id: "aurora", display_name: "Aurora" },
+            ],
+          },
+        }),
+    });
+    const tool = instrumentTool(configureResourceTool(createStudio(core)));
+    const result = await tool.execute({ id: "database-1", variant: "postgres" });
+    expect(result.content[0].text).toContain("Valid database variants: rds-multi-az, aurora");
   });
 
   it("only requires id", () => {

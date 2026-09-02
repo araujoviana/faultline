@@ -11,10 +11,12 @@ import { expect, type Page, test } from "@playwright/test";
 
 const TOOL_NAMES = [
   "propose-architecture",
+  "describe-architecture",
   "estimate-cost",
   "add-resource",
   "connect",
   "move-resource",
+  "remove-resource",
   "configure-resource",
   "simulate-failure",
   "find-spofs",
@@ -219,6 +221,17 @@ test("propose-architecture lays down a connected stack the human can adjust", as
   // Cache + queue tiers were pulled in by the keywords; everything is wired.
   await expect(page.locator("svg.canvas g.node-group")).toHaveCount(6);
   await expect(page.locator("svg.canvas path.edge")).toHaveCount(6);
+
+  // describe-architecture reads the canvas back so the agent can see it.
+  const described = await demo(page, "describe-architecture", {});
+  expect(described).toContain("6 resource(s):");
+  expect(described).toMatch(/cache-1 \(cache\)/);
+  expect(described).toContain("→");
+
+  // remove-resource deletes a node and its edges; undo restores it.
+  const removed = await demo(page, "remove-resource", { id: "cache-1" });
+  expect(removed).toContain("Removed cache-1");
+  await expect(page.locator("svg.canvas g.node-group")).toHaveCount(5);
 
   // A human can immediately do the same from the palette input.
   await page.locator("aside.palette .propose-in").fill("serverless api with a key-value store");

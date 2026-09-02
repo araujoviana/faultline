@@ -13,6 +13,12 @@ let { studio }: { studio: StudioStore } = $props();
 const tools = buildToolRegistry(studio);
 let path = $state(window.location.pathname);
 
+// Shown on a production build opened in a browser with no WebMCP runtime — so a
+// judge who lands here without ChatGPT Desktop / a WebMCP flag knows the agent
+// layer exists elsewhere rather than seeing a plain editor.
+let mcpMissing = $state(false);
+let noticeDismissed = $state(false);
+
 function go(to: string, event: MouseEvent) {
   event.preventDefault();
   window.history.pushState({}, "", to);
@@ -28,6 +34,7 @@ onMount(() => {
   let controller: AbortController | undefined;
   registerTools(tools.map(instrumentTool)).then((c) => {
     controller = c;
+    mcpMissing = typeof document !== "undefined" && !document.modelContext;
   });
 
   return () => {
@@ -55,6 +62,17 @@ onMount(() => {
   </nav>
 </header>
 
+{#if mcpMissing && !noticeDismissed}
+  <div class="mcp-notice" role="status">
+    <span>
+      Faultline registers {tools.length} agent tools on <code>document.modelContext</code>. This browser
+      has no WebMCP runtime — open in ChatGPT Desktop, or Chrome/Edge with WebMCP enabled, to use the
+      agent. You can still drive everything by hand here. See <a href="/learn" onclick={(e) => go("/learn", e)}>Learn</a>.
+    </span>
+    <button class="ghost" aria-label="Dismiss" onclick={() => (noticeDismissed = true)}>×</button>
+  </div>
+{/if}
+
 <main>
   {#if path === "/learn"}
     <Learn {tools} />
@@ -81,6 +99,25 @@ onMount(() => {
 </footer>
 
 <style>
+  .mcp-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-2) clamp(0.9rem, 3vw, 1.25rem);
+    background: var(--accent-wash);
+    border-bottom: 1px solid var(--line);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+  }
+  .mcp-notice code {
+    font-size: 0.85em;
+  }
+  .mcp-notice button {
+    margin-left: auto;
+    flex-shrink: 0;
+    padding: 0 0.4rem;
+    line-height: 1.4;
+  }
   header {
     display: flex;
     align-items: center;

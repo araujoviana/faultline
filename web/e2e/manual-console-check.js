@@ -24,9 +24,11 @@
 
   const EXPECTED = [
     "propose-architecture",
+    "describe-architecture",
     "add-resource",
     "connect",
     "move-resource",
+    "remove-resource",
     "configure-resource",
     "simulate-failure",
     "find-spofs",
@@ -124,6 +126,12 @@
   await call("find-spofs", {}, ["database-1", "compute-1", "load-balancer-1"]);
   console.log("%c👁 canvas: dashed red ring around database-1", "color:#0aa");
 
+  console.log(
+    "%c— Step 3b: describe-architecture (agent reads the canvas) —",
+    "color:#8b5cf6;font-weight:bold",
+  );
+  await call("describe-architecture", {}, ["3 resource(s):", "database-1 (database)", "→"]);
+
   console.log("%c— Step 4: resilience-lint —", "color:#8b5cf6;font-weight:bold");
   await call("resilience-lint", {}, ["single-az-datastore", "DDIA"], "must cite DDIA");
 
@@ -173,6 +181,10 @@
     "%c👁 canvas: all 3 nodes RED again; banner 'region us-east-1 — 3 down'",
     "color:#0aa",
   );
+
+  console.log("%c— Step 7c: remove-resource —", "color:#8b5cf6;font-weight:bold");
+  await call("remove-resource", { id: "load-balancer-1" }, ["Removed load-balancer-1"]);
+  console.log("%c👁 canvas: alb node + its edge gone; hit Undo to restore", "color:#0aa");
 
   // Summary
   const pass = results.filter((r) => r.ok === "✅").length;

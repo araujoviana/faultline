@@ -22,7 +22,7 @@ export function resilienceLintTool(studio: StudioStore): WebMcpTool {
       properties: {},
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
     async execute() {
       const findings = studio.lint();
       const score = studio.score;

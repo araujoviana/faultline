@@ -4,9 +4,9 @@ The automated `e2e/demo.spec.ts` (Playwright, Chromium) drives this exact flow t
 `@mcp-b/global` polyfill. This document is for verifying the same flow in a **real** WebMCP
 runtime, which only a human on real hardware can do (ChatGPT Desktop especially).
 
-> **Tool surface as of this revision: 11 tools** — `propose-architecture`, `add-resource`, `connect`,
-> `move-resource`, `configure-resource`, `simulate-failure`, `find-spofs`, `resilience-lint`,
-> `explain`, `estimate-cost`, `generate-iac`.
+> **Tool surface as of this revision: 13 tools** — `propose-architecture`, `describe-architecture`,
+> `add-resource`, `connect`, `move-resource`, `remove-resource`, `configure-resource`,
+> `simulate-failure`, `find-spofs`, `resilience-lint`, `explain`, `estimate-cost`, `generate-iac`.
 > `web/src/tools/registry.ts` is the source of truth; `/learn` renders it live. If `/learn` shows a
 > different count, this doc is stale — trust `/learn`.
 
@@ -77,10 +77,12 @@ nothing", check that the input was stringified.
 | Tool | Required input | Optional | Read-only | Effect |
 |---|---|---|---|---|
 | `propose-architecture` | `requirements` | — | no | Replaces the canvas with a connected, configured, placed starting topology built from a plain-language sentence (deterministic keyword matching). One undo step. |
+| `describe-architecture` | *(none)* | — | **yes** | Reads the whole canvas back: every resource (id, kind, label, variant, placement) and every edge. Call it first to see what's there. |
 | `add-resource` | `kind`, `label` | — | no | Adds a node. `kind` ∈ `compute`, `database`, `queue`, `load-balancer`, `object-store`, `cache`, `cdn`, `dns`, `functions`, `api-gateway`. Id is auto-assigned as `<kind>-<n>`. |
 | `connect` | `from`, `to` | — | no | Directed edge `from → to` = "`from` depends on / calls `to`". Both ids must exist. |
 | `move-resource` | `id`, `x`, `y` | — | no | Repositions a node on the canvas (one undo step). Mirrors a human drag. |
-| `configure-resource` | `id` | `variant`, `region`, `az` | no | Sets the provider variant and/or placement. Omitted fields unchanged. `region` set + `az` omitted = regional (multi-AZ). |
+| `remove-resource` | `id` | — | no | Deletes a node and any edges touching it. One undo step. |
+| `configure-resource` | `id` | `variant`, `region`, `az` | no | Sets the provider variant and/or placement. Omitted fields unchanged. On an unknown variant it lists the valid ones for that kind. `region` set + `az` omitted = regional (multi-AZ). |
 | `simulate-failure` | `region` | `az` | **yes** | With `az`: knocks out one AZ. Without `az`: knocks out the whole region (everything placed there except global services). Drives the canvas overlay + banner. |
 | `find-spofs` | *(none)* | — | **yes** | Rings single-point-of-failure nodes; lists what each orphans. |
 | `resilience-lint` | *(none)* | — | **yes** | Rule-based resilience/misconfig checks over the graph; each finding cites a *Designing Data-Intensive Applications* (2nd ed.) chapter/section. |
@@ -204,10 +206,10 @@ Run in order. "Agent call" = the tool + input the agent issues. Check both the *
 
 ### Step 8 — `/learn`
 
-- Navigate to `/learn`. All **11** tools render: `propose-architecture`, `add-resource`, `connect`,
-  `move-resource`, `configure-resource`, `simulate-failure`, `find-spofs`, `resilience-lint`,
-  `explain`, `estimate-cost`, `generate-iac` — each with its description, the `read-only` tag where
-  applicable, and a formatted JSON input schema.
+- Navigate to `/learn`. All **13** tools render: `propose-architecture`, `describe-architecture`,
+  `add-resource`, `connect`, `move-resource`, `remove-resource`, `configure-resource`,
+  `simulate-failure`, `find-spofs`, `resilience-lint`, `explain`, `estimate-cost`, `generate-iac` —
+  each with its description, the `read-only` tag where applicable, and a formatted JSON input schema.
 - **Hard-refresh `/learn`** (Cmd/Ctrl-R on the route directly) — it must survive (SPA fallback via
   `_redirects`).
 
@@ -228,7 +230,7 @@ error-recovery behaviour, and p50/p95 tool latency.
 - [ ] Step 5 — harden + re-simulate + re-lint: DB amber "~90s", compute + LB healthy, banner "1 degraded", single-AZ finding cleared
 - [ ] Step 6 — generate-iac: fenced hcl, `aws_db_instance` + `multi_az` + `target_group_arns`
 - [ ] Step 7 — move-resource: node repositions, undo reverts
-- [ ] Step 8 — `/learn` lists all 11 tools with schemas; hard-refresh survives
+- [ ] Step 8 — `/learn` lists all 13 tools with schemas; hard-refresh survives
 - [ ] No console errors during the run
 
 ### Edge 150+ (flag enabled)
@@ -240,12 +242,12 @@ error-recovery behaviour, and p50/p95 tool latency.
 - [ ] Step 5 — harden + re-simulate + re-lint: DB amber "~90s", compute + LB healthy, banner "1 degraded", single-AZ finding cleared
 - [ ] Step 6 — generate-iac: fenced hcl, `aws_db_instance` + `multi_az` + `target_group_arns`
 - [ ] Step 7 — move-resource: node repositions, undo reverts
-- [ ] Step 8 — `/learn` lists all 11 tools with schemas; hard-refresh survives
+- [ ] Step 8 — `/learn` lists all 13 tools with schemas; hard-refresh survives
 - [ ] No console errors during the run
 
 ### ChatGPT Desktop browser
 - [ ] `document.modelContext` present on opening the URL (no flag)
-- [ ] Agent discovers all 11 tools (ask it to list what it can do here)
+- [ ] Agent discovers all 13 tools (ask it to list what it can do here)
 - [ ] Step 1 — build: 3 nodes, 2 edges
 - [ ] Step 2 — simulate: 3 red, banner "3 down"
 - [ ] Step 3 — find-spofs: ring on `database-1`, orphans named
@@ -253,7 +255,7 @@ error-recovery behaviour, and p50/p95 tool latency.
 - [ ] Step 5 — harden + re-simulate + re-lint: DB amber "~90s", compute + LB healthy, banner "1 degraded", single-AZ finding cleared
 - [ ] Step 6 — generate-iac: fenced hcl, `aws_db_instance` + `multi_az` + `target_group_arns`
 - [ ] Step 7 — move-resource: node repositions, undo reverts
-- [ ] Step 8 — `/learn` lists all 11 tools with schemas; hard-refresh survives
+- [ ] Step 8 — `/learn` lists all 13 tools with schemas; hard-refresh survives
 - [ ] `executeTool` input passed as a JSON string (agent-side; verify calls land)
 - [ ] No console errors during the run
 

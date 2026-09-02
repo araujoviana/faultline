@@ -40,9 +40,16 @@ export function configureResourceTool(studio: StudioStore): WebMcpTool {
       try {
         studio.configure(id, variant, region, az);
       } catch (error) {
-        return {
-          content: [{ type: "text", text: error instanceof Error ? error.message : String(error) }],
-        };
+        const message = error instanceof Error ? error.message : String(error);
+        // On an unknown-variant error, tell the agent which ones are valid for
+        // this kind — the variant ids aren't an enum in the schema.
+        const kind = studio.state.resources.find((r) => r.id === id)?.kind;
+        const valid = kind ? (studio.profile.variants[kind] ?? []).map((v) => v.id) : [];
+        const hint =
+          message.includes("variant") && valid.length
+            ? ` Valid ${kind} variants: ${valid.join(", ")}.`
+            : "";
+        return { content: [{ type: "text", text: message + hint }] };
       }
 
       const parts: string[] = [];

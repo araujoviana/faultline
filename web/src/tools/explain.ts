@@ -25,7 +25,7 @@ export function explainTool(studio: StudioStore): WebMcpTool {
       required: ["selection"],
       additionalProperties: false,
     },
-    annotations: { readOnlyHint: true },
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
     async execute(input) {
       const selection = String(input.selection ?? "").trim();
       if (!selection) {

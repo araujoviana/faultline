@@ -50,18 +50,20 @@ log. The human stays in charge.
 
 ## WebMCP tools
 
-Eleven intent-level tools (source of truth: `web/src/tools/`, rendered live at `/learn`):
+Thirteen intent-level tools (source of truth: `web/src/tools/`, rendered live at `/learn`):
 
 | Tool | Kind | What it does |
 |---|---|---|
 | `propose-architecture` | write | Build a starting topology from a plain-language requirements sentence |
+| `describe-architecture` | read-only | Read the whole canvas back — every node's config and every edge |
 | `add-resource` | write | Add a node of a given kind + label |
 | `connect` | write | Directed dependency edge `from → to` |
 | `move-resource` | write | Reposition a node (mirrors a human drag) |
+| `remove-resource` | write | Delete a node and its edges |
 | `configure-resource` | write | Set provider variant and/or region/AZ placement |
 | `simulate-failure` | read-only | Fail one AZ (or a whole region); report the blast radius |
 | `find-spofs` | read-only | List single points of failure and what they orphan |
-| `resilience-lint` | read-only | Rule-based resilience checks, each with a DDIA citation |
+| `resilience-lint` | read-only | Rule-based resilience checks + a 0–100 score, each finding with a DDIA citation |
 | `explain` | read-only | Plain-language account of a resource or edge: role, dependents, blast radius, principle |
 | `estimate-cost` | read-only | Rough monthly cost from a bundled pricing snapshot, with the delta since the last estimate |
 | `generate-iac` | read-only | Emit the architecture as Terraform HCL |
